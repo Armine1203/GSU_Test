@@ -21,6 +21,16 @@
     </label>
     <input type="password" class="form-control" id="exampleInputPassword1" name="Գաղտնաբառ" placeholder="Գաղտնաբառ" required>
   </div>
+  <div class="mb-3">
+    <label class="form-label">Account Type</label>
+    <select name="user_type" class="form-select" required>
+        <option value="1">Student</option>
+        <option value="2">Lector</option>
+        {% if user.is_administrator %}  # Only show admin option to admins
+        <option value="3">Administrator</option>
+        {% endif %}
+    </select>
+</div>
   <button type="submit" class="btn btn-primary w-100">Ուղարկել</button>
 </form>
 </div>

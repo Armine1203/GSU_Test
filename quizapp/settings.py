@@ -31,6 +31,7 @@ ALLOWED_HOSTS = []
 
 # Application definition
 
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -38,7 +39,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'account.apps.AccountConfig',
+    'quiz.apps.QuizConfig',
+    'management.apps.ManagementConfig'
 ]
+AUTH_USER_MODEL = 'account.User'  # new
 
 EXTERNAL_APPS = [
     "account.apps.AccountConfig",

@@ -1,76 +1,92 @@
 <!doctype html>
-<html lang="en" data-bs-theme="dark">
+<html lang="hy" data-bs-theme="dark">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  {% load static %}
-  <link href="{% static 'css/bootstrap.css' %}" rel="stylesheet">
-  <link href="{% static 'css/layout.css' %}" rel="stylesheet">
-  <link href="{% static 'css/home.css' %}" rel="stylesheet">
-  <link href="{% static 'css/login_register.css' %}" rel="stylesheet">
-  <title>{% block title %}{% endblock %} | GSU Test</title>
-  <link rel="icon" href="{% static 'img/logo.png' %}">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {% load static %}
+    <link href="{% static 'css/bootstrap.css' %}" rel="stylesheet">
+    <link href="{% static 'css/layout.css' %}" rel="stylesheet">
+    <link href="{% static 'css/home.css' %}" rel="stylesheet">
+    <link href="{% static 'css/login_register.css' %}" rel="stylesheet">
+    <title>{% block title %}{% endblock %} | GSU Test</title>
+    <link rel="icon" href="{% static 'img/logo.png' %}">
 </head>
-<body>
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
-    <div class="container-fluid">
-      <a class="navbar-brand" href="/">
-        <img src="{% static 'img/logo.png' %}" alt="" width="50" height="50" class="d-inline-block">
-        ԳՊՀ ԹԵՍՏ
-      </a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav">
-          {% if request.user.is_authenticated %}
-          {% if request.user.is_staff %}
-           <li class="nav-item">
-            <a class="nav-link text-center" href="{% url 'add_question' %}">Ավելացնել Հարցեր</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link text-center" href="{% url 'manage' %}">Կառավարել</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link text-center" href="{% url 'setting' %}">Կարգավորումներ</a>
-          </li>
-          {% else %}
 
-          <li class="nav-item">
-            <a class="nav-link text-center" href="{% url 'quiz' %}">Քննություն</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link text-center" href="{% url 'result' %}">Արդյունք</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link text-center" href="{% url 'leaderboard' %}">Առաջատար</a>
-          </li>
-          {% endif %}
-          <li class="nav-item">
-            <a class="nav-link text-center" href="{% url 'logout' %}">Դուրս  գալ</a>
-          </li>
-          {% else %}
-          <li class="nav-item">
-            <a class="nav-link text-center" href="{% url 'login' %}">Մուտք</a>
-          </li>
-<!--          <li class="nav-item">-->
-<!--            <a class="nav-link text-center" href="{% url 'register' %}">Գրանցում</a>-->
-<!--          </li>-->
-          {% endif %}
-        </ul>
-      </div>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">
+            <img src="{% static 'img/logo.png' %}" alt="Logo" width="50" height="50" class="d-inline-block">
+            ԳՊՀ ԹԵՍՏ
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                {% if user.is_authenticated %}
+                {% if user.is_admin %}
+                <li class="nav-item">
+                    <a class="nav-link text-center" href="{% url 'manage' %}">Ադմին Պանել</a>
+                </li>
+                {% elif user.is_instructor %}
+                <li class="nav-item">
+                    <a class="nav-link text-center" href="{% url 'add_question' %}">Ավելացնել Հարցեր</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-center" href="{% url 'manage' %}">Կառավարել</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-center" href="{% url 'setting' %}">Կարգավորումներ</a>
+                </li>
+                {% else %}  <!-- Student view -->
+                <li class="nav-item">
+                    <a class="nav-link text-center" href="{% url 'quiz' %}">Քննություն</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-center" href="{% url 'result' %}">Արդյունք</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-center" href="{% url 'leaderboard' %}">Առաջատար</a>
+                </li>
+                {% endif %}
+                <li class="nav-item">
+                    <a class="nav-link text-center" href="{% url 'logout' %}">Դուրս գալ</a>
+                </li>
+                {% endif %}
+
+                <li class="nav-item">
+                    <a class="nav-link text-center" href="{% url 'logout' %}">Դուրս գալ</a>
+                </li>
+
+                {% else %}
+                <li class="nav-item">
+                    <a class="nav-link text-center" href="{% url 'login' %}">Մուտք</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-center" href="{% url 'register' %}">Գրանցում</a>
+                </li>
+                {% endif
+
+            </ul>
+            {% if user.is_authenticated %}
+            <span class="navbar-text ms-auto">
+          Բարև, {{ user.username }} ({{ user.get_user_type_display }})
+        </span>
+            {% endif %}
+        </div>
     </div>
-  </nav>
-  {% if messages %}
-  {% for message in messages %}
-  <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+</nav>
+{% if messages %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
     <strong>{{ message.tags|upper }}</strong> {{ message }}
     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-  </div>
-  {% endfor %}
-  {% endif %}
-  {% block body %}{% endblock %}
-  <script src="{% static 'js/bootstrap.js' %}"></script>
+</div>
+{% endfor %}
+{% endif %}
+{% block body %}{% endblock %}
+<script src="{% static 'js/bootstrap.js' %}"></script>
 </body>
 </html>

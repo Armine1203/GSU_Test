@@ -1,15 +1,27 @@
 from django.shortcuts import redirect, render
-from django.views import View
 from django.urls import reverse
 from django.conf import settings
-from django.contrib import messages
 from django.utils.decorators import method_decorator
 from django.contrib.admin.views.decorators import staff_member_required
-from quiz.models import Mark, Question
 from os.path import join
+from django.views import View
+from django.contrib import messages
+from django.utils.decorators import method_decorator
+from django.contrib.auth.decorators import user_passes_test
+from quiz.models import Question, Mark
+from account.models import User
 
-# Create your views here.
-@method_decorator(staff_member_required, name="dispatch")
+
+def admin_required(function=None):
+    actual_decorator = user_passes_test(
+        lambda u: u.is_authenticated and u.is_admin(),
+        login_url='/account/login/'
+    )
+    if function:
+        return actual_decorator(function)
+    return actual_decorator
+
+@method_decorator(admin_required(), name="dispatch")
 class Manage(View):
     def get(self, request):
         panel_options = {
@@ -32,12 +44,12 @@ class Manage(View):
             {"panel_options": panel_options}
         )
 
-@method_decorator(staff_member_required, name="dispatch")
+@method_decorator(admin_required(), name="dispatch")
 class Results(View):
     def get(self, request):
         return render(request, "management/results.html", {"results": Mark.objects.all()})
 
-@method_decorator(staff_member_required, name="dispatch")
+@method_decorator(admin_required(), name="dispatch")
 class UploadQuestion(View):
     def get(self, request):
         return render(request, "management/upload_question.html")
@@ -54,7 +66,7 @@ class UploadQuestion(View):
             messages.success(request, "CSV file uploaded")
         return redirect("manage")
 
-@method_decorator(staff_member_required, name="dispatch")
+@method_decorator(admin_required(), name="dispatch")
 class VerifyQuestion(View):
     def get(self, request):
         qs = Question.objects.filter(verified=False)
@@ -75,7 +87,7 @@ class VerifyQuestion(View):
         messages.success(request, f"{count} questions added")
         return redirect("manage")
 
-@method_decorator(staff_member_required, name="dispatch")
+@method_decorator(admin_required(), name="dispatch")
 class Setting(View):
     def get(self, request):
         info = {
