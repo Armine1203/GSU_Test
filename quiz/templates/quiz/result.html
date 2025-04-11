@@ -1,0 +1,34 @@
+{% extends 'layout.html' %}
+
+{% block title %}Արդյունք{% endblock %}
+
+{% block body %}
+<div class="container mt-5 mb-5">
+    <h1 class="text-center">
+        Արդյունք
+    </h1>
+    <table class="table">
+        <thead>
+        <tr>
+            <th scope="col">#</th>
+            <th scope="col">Հարցեր</th>
+            <th scope="col">Ճիշտ</th>
+            <th scope="col">Արդյունք</th>
+            <th scope="col">Հանձնման տվյալները</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for result in results %}
+        <tr>
+            <th scope="row">{{ forloop.counter }}</th>
+            <td>{{ result.total }}</td>
+            <td>{{ result.got }}</td>
+            <td>{{ result.got }}/{{ result.total }}</td>
+            <td>{{ result.created_at|date:"Y-m-d H:i:s" }}</td> <!-- NEW -->
+
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

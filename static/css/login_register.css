@@ -1,0 +1,29 @@
+/* Ֆորմայի դաշտերի ձևավորում */
+.form-control {
+    background-color: #222;
+    color: white;
+    border: 1px solid #444;
+    border-radius: 5px;
+}
+
+.form-control::placeholder {
+    color: #bbb;
+}
+
+/* Կոճակի ոճավորում */
+.btn-primary {
+    background-color: #271f55;
+    border: none;
+    font-size: 1.1rem;
+    padding: 10px;
+}
+
+.btn-primary:hover {
+    background-color:#ffcc00 !importants;
+}
+
+/* Գլխավոր վերնագրի ձևավորում */
+h1 {
+    font-size: 2rem;
+    color: #222;
+}

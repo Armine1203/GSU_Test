@@ -1,0 +1,24 @@
+{% extends 'layout.html' %}
+
+{% block title %}Index{% endblock %}
+
+{% block body %}
+<div class="container mt-5 mb-5">
+<div class="row">
+  <p>Ողջույն հարգելի օգտատեր <b><i>{% if request.user.is_authenticated %} {{ request.user.username }}{% endif %},</i></b></p>
+</div>
+<div class="row">
+  <p>Դուք գտնվում եք ԳՊՀ ԹԵՍՏ կայքում։</p>
+</div>
+<div class="row">
+  <p>Այս կայքը նախատեսված է ԳՊՀ ուսանողների և դասախոսների համար՝ միջանկյալ-ընթացիկ թեստային քննություններ անցկացնելու համար։</p>
+<p>Կայքը ստեղծվել է <b>Արմինե Լալայանի</b> կողմից 2025 թվականին՝ դիպլոմային աշխատանքի շրջանակում։</p>
+</div>
+<div class="row">
+  <p>Հաջող քննություններ!</p>
+</div>
+<div class="row">
+  <p><em>Արմինե Լալայան </em>2025</p>
+</div>
+</div>
+{% endblock %}

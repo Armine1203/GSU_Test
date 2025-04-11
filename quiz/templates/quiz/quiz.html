@@ -1,0 +1,95 @@
+{% extends "layout.html" %}
+
+{% block title %}Quiz{% endblock %}
+
+{% block body %}
+<div class="container mt-5 mb-5">
+  <div class="alert alert-warning text-center" role="alert">
+  Մնացած ժամանակը՝ <strong><span id="timer"></span></strong>
+</div>
+
+<form method="post" action="{% url 'quiz' %}">
+  {% csrf_token %}
+  <h1 class="text-center">
+    Թեստ
+  </h1>
+  {% for q in questions %}
+  <div class="card border-info">
+    <div class="card-header bg-info text-white">Հարց {{forloop.counter}}</div>
+      <div class="card-body">
+        <h5 class="user-select-none">
+          {{ q.question }}
+        </h5>
+        <input type="hidden" name="q{{forloop.counter}}" value="{{q.id}}">
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="q{{forloop.counter}}o" id="q{{forloop.counter}}o1" value="A">
+          <label class="form-check-label" for="q{{forloop.counter}}o1">
+            {{ q.option1 }}
+          </label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="q{{forloop.counter}}o" id="q{{forloop.counter}}o2" value="B">
+          <label class="form-check-label" for="q{{forloop.counter}}o2">
+            {{ q.option2 }}
+          </label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="q{{forloop.counter}}o" id="q{{forloop.counter}}o3" value="C">
+          <label class="form-check-label" for="q{{forloop.counter}}o3">
+            {{ q.option3 }}
+          </label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="q{{forloop.counter}}o" id="q{{forloop.counter}}o4" value="D">
+          <label class="form-check-label" for="q{{forloop.counter}}o4">
+            {{ q.option4 }}
+          </label>
+        </div>
+      </div>
+    </div>
+    <br>
+    {% endfor %}
+    <br>
+    <div class="mb-3 form-check">
+      <input type="checkbox" class="form-check-input" id="exampleCheck1" required>
+      <label class="form-check-label" for="exampleCheck1">
+         Հաստատում եմ
+      </label>
+    </div>
+  </div>
+  <br>
+  <button type="submit" class="btn btn-primary w-100">Ուղարկել</button>
+</form>
+</div>
+<!--for timer-->
+<script>
+  const quizDuration = {{ time_limit|default:2400 }} * 1000;  // milliseconds
+  const startTime = new Date("{{ start_time }}");  // ISO format
+  const endTime = new Date(startTime.getTime() + quizDuration);
+
+  const timerElement = document.getElementById("timer");
+  const form = document.querySelector("form");
+
+  function updateTimer() {
+    const now = new Date();
+    const remaining = endTime - now;
+
+    if (remaining <= 0) {
+      timerElement.textContent = "Ժամանակը լրացել է";
+      clearInterval(timerInterval);
+      alert("Ժամանակը լրացել է։ Թեստն ավտոմատ կուղարկվի։");
+      form.submit();
+    } else {
+      const minutes = Math.floor(remaining / 60000);
+      const seconds = Math.floor((remaining % 60000) / 1000);
+      timerElement.textContent = `${minutes}ր ${seconds}վ`;
+    }
+  }
+
+  updateTimer();  // initial call
+  const timerInterval = setInterval(updateTimer, 1000);
+</script>
+
+{% endblock %}
+
+

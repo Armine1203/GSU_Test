@@ -1,0 +1,55 @@
+{% extends 'layout.html' %}
+
+{% block title %}Ավելացնել հարցեր{% endblock %}
+
+{% block body %}
+<div class="container mt-5 mb-5">
+<form method="post" action="{% url 'add_question' %}">
+  {% csrf_token %}
+  <h1 class="text-center">
+    Ավելացնել հարցեր
+  </h1>
+  <br><br>
+  {% for i in questions %}
+  <div class="mb-3">
+    <label for="InputQuestion{{ i }}" class="form-label">
+      Հարց {{ i }}
+    </label>
+    <input type="text" class="form-control" id="InputQuestion{{ i }}" name="q{{ i }}" placeholder="Հարց {{ i }}" required autofocus>
+  </div>
+  <div class="row">
+    <div class="col">
+      <input type="text" class="form-control" placeholder="Տարբերակ 1" name="q{{ i }}o1" required>
+    </div>
+    <div class="col">
+      <input type="text" class="form-control" placeholder="Տարբերակ 2" name="q{{ i }}o2" required>
+    </div>
+    <div class="col">
+      <input type="text" class="form-control" placeholder="Տարբերակ 3" name="q{{ i }}o3" required>
+    </div>
+    <div class="col">
+      <input type="text" class="form-control" placeholder="Տարբերակ 4" name="q{{ i }}o4" required>
+    </div>
+  </div>
+  <br>
+  <select class="form-select" name="q{{ i }}c" required>
+    <option selected disabled value=''>Ընտրեք ճիշտ տարբերակը</option>
+    <option value="A">1</option>
+    <option value="B">2</option>
+    <option value="C">3</option>
+    <option value="D">4</option>
+  </select>
+  <br>
+  {% endfor %}
+  <br>
+  <div class="mb-3 form-check">
+    <input type="checkbox" class="form-check-input" id="exampleCheck1" required>
+    <label class="form-check-label" for="exampleCheck1">
+      Հաստատում եմ
+    </label>
+  </div>
+  <br><br><br>
+  <button type="submit" class="btn btn-primary w-100">Ուղարկել</button>
+</form>
+</div>
+{% endblock %}
