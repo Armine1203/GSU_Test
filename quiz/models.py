@@ -5,6 +5,7 @@ from django.utils import timezone
 # Create your models here.
 class Question(models.Model):
     question = models.TextField(blank=False, unique=True)
+    image = models.ImageField(upload_to='question_images/', blank=True, null=True)
     option1 = models.CharField(blank=False, max_length=150)
     option2 = models.CharField(blank=False, max_length=150)
     option3 = models.CharField(blank=False, max_length=150)

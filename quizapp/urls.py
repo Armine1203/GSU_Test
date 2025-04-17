@@ -25,3 +25,6 @@ urlpatterns = [
     path("quiz/", include("quiz.urls")),
     path("management/", include("management.urls")),
 ]
+from django.conf import settings
+from django.conf.urls.static import static
+static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

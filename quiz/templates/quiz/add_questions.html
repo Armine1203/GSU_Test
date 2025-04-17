@@ -4,7 +4,7 @@
 
 {% block body %}
 <div class="container mt-5 mb-5">
-<form method="post" action="{% url 'add_question' %}">
+<form method="post" action="{% url 'add_question' %}" enctype="multipart/form-data">
   {% csrf_token %}
   <h1 class="text-center">
     Ավելացնել հարցեր
@@ -17,6 +17,13 @@
     </label>
     <input type="text" class="form-control" id="InputQuestion{{ i }}" name="q{{ i }}" placeholder="Հարց {{ i }}" required autofocus>
   </div>
+
+  <!-- Add image upload field -->
+  <div class="mb-3">
+    <label for="questionImage{{ i }}" class="form-label">Նկար (ըստ ցանկության)</label>
+    <input type="file" class="form-control" id="questionImage{{ i }}" name="q{{ i }}image" accept="image/*">
+  </div>
+
   <div class="row">
     <div class="col">
       <input type="text" class="form-control" placeholder="Տարբերակ 1" name="q{{ i }}o1" required>

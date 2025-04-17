@@ -138,3 +138,6 @@ LOGIN_URL = "/account/login"
 GLOBAL_SETTINGS = {
     "questions": 5
 }
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
