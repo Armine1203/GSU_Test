@@ -10,17 +10,17 @@ User = get_user_model()
 
 
 # Custom User Admin
-class CustomUserAdmin(UserAdmin):
-    list_display = ('username', 'email', 'first_name', 'last_name', 'user_type', 'is_staff')
-    list_filter = ('user_type', 'is_staff')
-    fieldsets = (
-        (None, {'fields': ('username', 'password')}),
-        ('Personal info', {'fields': ('first_name', 'last_name', 'email')}),
-        ('Permissions', {
-            'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions', 'user_type'),
-        }),
-        ('Important dates', {'fields': ('last_login', 'date_joined')}),
-    )
+#class CustomUserAdmin(UserAdmin):
+#    list_display = ('username', 'email', 'first_name', 'last_name', 'user_type', 'is_staff')
+#    list_filter = ('user_type', 'is_staff')
+#    fieldsets = (
+#        (None, {'fields': ('username', 'password')}),
+#        ('Personal info', {'fields': ('first_name', 'last_name', 'email')}),
+#        ('Permissions', {
+#            'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions', 'user_type'),
+#        }),
+#        ('Important dates', {'fields': ('last_login', 'date_joined')}),
+#    )
 
 
 # Register your models here
@@ -49,10 +49,10 @@ class GroupAdmin(admin.ModelAdmin):
 
 
 class StudentAdmin(admin.ModelAdmin):
-    list_display = ('user', 'id_number', 'group')
+    list_display = ('name', 'last_name', 'id_number', 'group')
     list_filter = ('group',)
-    search_fields = ('user__username', 'user__first_name', 'user__last_name', 'id_number')
-    raw_id_fields = ('user',)
+    search_fields = ('last_name', 'id_number')
+    #raw_id_fields = ('user',)
 
 
 class LecturerAdmin(admin.ModelAdmin):
@@ -96,7 +96,7 @@ class MidtermExamAdmin(admin.ModelAdmin):
     questions_count.short_description = 'Questions'
 
 
-admin.site.register(User, CustomUserAdmin)
+#admin.site.register(User, CustomUserAdmin)
 admin.site.register(Faculty, FacultyAdmin)
 admin.site.register(Department, DepartmentAdmin)
 admin.site.register(Major, MajorAdmin)

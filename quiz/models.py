@@ -2,15 +2,16 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
 from django.conf import settings
+from django.contrib.auth.models import User
 
-class CustomUser(AbstractUser):
-    USER_TYPE_CHOICES = (
-        (1, 'admin'),
-        (2, 'lecturer'),
-        (3, 'student'),
-    )
-    user_type = models.PositiveSmallIntegerField(choices=USER_TYPE_CHOICES, default=3)
-    pass
+#class CustomUser(AbstractUser):
+#    USER_TYPE_CHOICES = (
+#        (1, 'admin'),
+#        (2, 'lecturer'),
+#        (3, 'student'),
+#    )
+#    user_type = models.PositiveSmallIntegerField(choices=USER_TYPE_CHOICES, default=3)
+#    pass
 
 class Faculty(models.Model):
     name = models.CharField(max_length=100)
@@ -42,15 +43,16 @@ class Group(models.Model):
         return f"{self.name} ({self.major})"
 
 class Student(models.Model):
-    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
+    name = models.CharField(max_length=100, default='Anun')
+    last_name = models.CharField(max_length=100, default='Azganun')
     id_number = models.CharField(max_length=20, unique=True)
     group = models.ForeignKey(Group, on_delete=models.CASCADE)
 
     def __str__(self):
-        return f"{self.user.get_full_name()} - {self.id_number}"
+        return f"{self.name} - {self.id_number}"
 
 class Lecturer(models.Model):
-    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
     subjects = models.ManyToManyField('Subject')
 
     def __str__(self):
@@ -79,7 +81,7 @@ class TestQuestion(models.Model):
     option4 = models.CharField(max_length=200)
     correct_option = models.CharField(max_length=1, choices=[('A', 'A'), ('B', 'B'), ('C', 'C'), ('D', 'D')])
     score = models.IntegerField(default=1)
-    creator = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True)
+    creator = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     verified = models.BooleanField(default=False)
     image = models.ImageField(upload_to='question_images/', null=True, blank=True)
 
