@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from django.views import View
-from .models import Question, Mark
+from .models import TestQuestion, Mark, Lecturer, Student, MidtermExam
 from django.conf import settings
 from django.contrib import messages
 from django.utils.decorators import method_decorator
@@ -14,7 +14,7 @@ class Quiz(View):
     TIME_LIMIT_SECONDS = 40 * 60
 
     def get(self, request):
-        questions = Question.objects.filter(verified=True)
+        questions = TestQuestion.objects.filter(verified=True)
         request.session['quiz_start_time'] = timezone.now().isoformat()
         return render(
             request,
@@ -27,9 +27,9 @@ class Quiz(View):
         )
 
     def post(self, request):
-        mark = Mark(user=request.user, total=Question.objects.filter(verified=True).count())
-        for i in range(1, Question.objects.filter(verified=True).count() + 1):
-            q = Question.objects.filter(pk=request.POST.get(f"q{i}", 0), verified=True).first()
+        mark = Mark(user=request.user, total=TestQuestion.objects.filter(verified=True).count())
+        for i in range(1, TestQuestion.objects.filter(verified=True).count() + 1):
+            q = TestQuestion.objects.filter(pk=request.POST.get(f"q{i}", 0), verified=True).first()
             if request.POST.get(f"q{i}o", "") == q.correct_option:
                 mark.got += 1
         mark.save()
@@ -62,11 +62,11 @@ class AddQuestion(View):
             co = data.get(f"q{i}c", "")
             image = files.get(f"q{i}image")  # Get the uploaded image for this question
 
-            if Question.objects.filter(question=q).first():
+            if TestQuestion.objects.filter(question=q).first():
                 already_exists += 1
                 continue
 
-            question = Question(
+            question = TestQuestion(
                 question=q,
                 option1=o1,
                 option2=o2,
@@ -99,3 +99,34 @@ class Leaderboard(View):
             "quiz/leaderboard.html",
             {"results": Mark.objects.all().order_by("-got")[:10]}
         )
+
+
+# In quiz/views.py
+@method_decorator(login_required, name="dispatch")
+class StudentDashboard(View):
+    def get(self, request):
+        if request.user.user_type != 3:
+            return redirect("index")
+
+        student = Student.objects.get(user=request.user)
+        exams = MidtermExam.objects.filter(group=student.group)
+
+        return render(request, "quiz/student_dashboard.html", {
+            'student': student,
+            'exams': exams,
+        })
+
+
+@method_decorator(login_required, name="dispatch")
+class LecturerDashboard(View):
+    def get(self, request):
+        if request.user.user_type != 2:
+            return redirect("index")
+
+        lecturer = Lecturer.objects.get(user=request.user)
+        subjects = lecturer.subjects.all()
+
+        return render(request, "quiz/lecturer_dashboard.html", {
+            'lecturer': lecturer,
+            'subjects': subjects,
+        })

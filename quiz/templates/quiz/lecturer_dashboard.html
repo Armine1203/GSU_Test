@@ -1,0 +1,29 @@
+{% extends 'layout.html' %}
+
+{% block title %}Lecturer Dashboard{% endblock %}
+
+{% block body %}
+<div class="container mt-5 mb-5">
+    <h1 class="text-center">Lecturer Dashboard</h1>
+    <div class="card">
+        <div class="card-header">
+            <h3>Welcome, {{ lecturer.user.username }}</h3>
+        </div>
+        <div class="card-body">
+            <h5>Your Subjects:</h5>
+            <ul class="list-group">
+                {% for subject in subjects %}
+                <li class="list-group-item">
+                    {{ subject.name }}
+                    <a href="{% url 'add_question' %}?subject={{ subject.id }}" class="btn btn-sm btn-primary float-end">Add Questions</a>
+                </li>
+                {% endfor %}
+            </ul>
+            
+            <div class="mt-4">
+                <a href="{% url 'manage' %}" class="btn btn-success">Management Panel</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

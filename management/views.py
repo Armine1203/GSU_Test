@@ -5,7 +5,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.utils.decorators import method_decorator
 from django.contrib.admin.views.decorators import staff_member_required
-from quiz.models import Mark, Question
+from quiz.models import Mark, TestQuestion
 from os.path import join
 
 # Create your views here.
@@ -57,7 +57,7 @@ class UploadQuestion(View):
 @method_decorator(staff_member_required, name="dispatch")
 class VerifyQuestion(View):
     def get(self, request):
-        qs = Question.objects.filter(verified=False)
+        qs = TestQuestion.objects.filter(verified=False)
         return render(request, "management/verify_question.html", {"questions": qs})
 
     def post(self, request):
@@ -65,7 +65,7 @@ class VerifyQuestion(View):
         for q, v in request.POST.items():
             if q.startswith("q") and v == "on":
                 id = q[1:]
-                q = Question.objects.filter(id=id).first()
+                q = TestQuestion.objects.filter(id=id).first()
                 if q is not None:
                     q.verified = True
                     q.save()
