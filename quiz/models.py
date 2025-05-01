@@ -1,5 +1,4 @@
 from django.db import models
-from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -85,8 +84,11 @@ class TestQuestion(models.Model):
     verified = models.BooleanField(default=False)
     image = models.ImageField(upload_to='question_images/', null=True, blank=True)
 
+    # def __str__(self):
+        # return f"{self.subject}: {self.question[:50]}..."
+
     def __str__(self):
-        return f"{self.subject}: {self.question[:50]}..."
+        return f"{self.question}"
 
 class MidtermExam(models.Model):
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)

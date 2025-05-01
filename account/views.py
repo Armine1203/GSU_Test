@@ -26,14 +26,19 @@ class Login(View):
             messages.success(request, "Դուք հաջողությամբ մուտք եք գործել")
 
             # Redirect based on user type
-            if user.is_staff:  # admin
+            # Redirect based on user type
+            if user.is_superuser or user.is_staff:
                 return redirect("manage")
-            elif user.user_type == 2:  # lecturer
-                return redirect("lecturer_dashboard")
-            else:  # student
-                return redirect("student_dashboard")
+            elif hasattr(user, 'user_type'):
+                if user.user_type == 2:  # Lecturer
+                    return redirect("lecturer_dashboard")
+                elif user.user_type == 3:  # Student
+                    return redirect("student_dashboard")
+
+            # Default redirect for other users
+            return redirect("index")
         else:
-            messages.warning(request, "Անունը կամ գաղտնաբառը սխալ են։")
+            messages.warning(request, "Invalid username or password")
         return render(request, "account/login.html")
 
 

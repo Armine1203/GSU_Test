@@ -120,13 +120,18 @@ class StudentDashboard(View):
 @method_decorator(login_required, name="dispatch")
 class LecturerDashboard(View):
     def get(self, request):
-        if request.user.user_type != 2:
+        if not hasattr(request.user, 'user_type') or request.user.user_type != 2:
+            messages.warning(request, "You don't have permission to access this page")
             return redirect("index")
 
-        lecturer = Lecturer.objects.get(user=request.user)
-        subjects = lecturer.subjects.all()
+        try:
+            lecturer = Lecturer.objects.get(user=request.user)
+            subjects = lecturer.subjects.all()
 
-        return render(request, "quiz/lecturer_dashboard.html", {
-            'lecturer': lecturer,
-            'subjects': subjects,
-        })
+            return render(request, "quiz/lecturer_dashboard.html", {
+                'lecturer': lecturer,
+                'subjects': subjects,
+            })
+        except Lecturer.DoesNotExist:
+            messages.error(request, "Lecturer profile not found")
+            return redirect("index")
