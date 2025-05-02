@@ -1,0 +1,39 @@
+.nav-link:hover{
+  color: white;
+  border-style: solid;
+  background-color: #271f55;
+  border-color: #271f55;
+  border-radius: 13px;
+}
+.navbar .navbar-nav .nav-link {
+  padding: 0.6em;
+}
+.navbar .navbar-brand {
+  padding: 0 0.6em;
+}
+@media only screen and (min-width: 992px) {
+.navbar {
+  padding: 0;
+}
+.navbar .navbar-nav .nav-link {
+  padding: 1em 0.7em;
+}
+.navbar .navbar-brand {
+  padding: 0 0.8em;
+}
+.navbar .navbar-nav .nav-link {
+  padding: 1em 0.7em;
+  transition: all 0.5s;
+}
+body {
+        margin: 0;
+        font-family: var(--bs-body-font-family);
+        font-size: var(--bs-body-font-size);
+        font-weight: var(--bs-body-font-weight);
+        line-height: var(--bs-body-line-height);
+        color: #271f55;
+        text-align: var(--bs-body-text-align);
+        background-color: #d9d7ef;
+        -webkit-text-size-adjust: 100%;
+        -webkit-tap-highlight-color: transparent;
+}

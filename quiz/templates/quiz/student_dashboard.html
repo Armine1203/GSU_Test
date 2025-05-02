@@ -1,0 +1,32 @@
+{% extends 'layout.html' %}
+
+{% block title %}Student Dashboard{% endblock %}
+
+{% block body %}
+<div class="container mt-5 mb-5">
+    <h1 class="text-center">Student Dashboard</h1>
+    <div class="card">
+        <div class="card-header">
+            <h3>Welcome, {{ student.user.username }}</h3>
+        </div>
+        <div class="card-body">
+            <h5>Your Information:</h5>
+            <p>ID Number: {{ student.id_number }}</p>
+            <p>Group: {{ student.group.name }}</p>
+            <p>Major: {{ student.group.major.name }}</p>
+
+            <h5 class="mt-4">Upcoming Exams:</h5>
+            <ul class="list-group">
+                {% for exam in exams %}
+                <li class="list-group-item">
+                    {{ exam.subject.name }} - Due: {{ exam.due_date|date:"Y-m-d H:i" }}
+                    <a href="{% url 'quiz' %}" class="btn btn-sm btn-primary float-end">Take Exam</a>
+                </li>
+                {% empty %}
+                <li class="list-group-item">No upcoming exams</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

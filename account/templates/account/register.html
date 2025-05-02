@@ -1,0 +1,27 @@
+{% extends 'layout.html' %}
+
+{% block title %}Register{% endblock %}
+
+{% block body %}
+<div class="container mt-5 mb-5">
+<form method="post" action="{% url 'register' %}">
+  {% csrf_token %}
+  <h1 class="text-center">
+    Գրանցում
+  </h1>
+  <div class="mb-3">
+    <label for="name" class="form-label">
+      Անուն
+    </label>
+    <input type="text" class="form-control" id="name" aria-describedby="nameHelp" name="username" placeholder="Անուն" required autofocus>
+  </div>
+  <div class="mb-3">
+    <label for="exampleInputPassword1" class="form-label">
+      Գաղտնաբառ
+    </label>
+    <input type="password" class="form-control" id="exampleInputPassword1" name="password" placeholder="Գաղտնաբառ" required>
+  </div>
+  <button type="submit" class="btn btn-primary w-100">Ուղարկել</button>
+</form>
+</div>
+{% endblock %}

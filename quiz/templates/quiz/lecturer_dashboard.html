@@ -1,0 +1,50 @@
+{% extends 'layout.html' %}
+
+{% block title %}Lecturer Dashboard{% endblock %}
+
+{% block body %}
+<div class="container mt-5 mb-5">
+    <h1 class="text-center">Lecturer Dashboard</h1>
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    My Subjects
+                </div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        {% for subject in subjects %}
+                        <li class="list-group-item">
+                            {{ subject.name }} ({{ subject.major }})
+                            <a href="{% url 'add_question' %}?subject={{ subject.id }}" class="btn btn-sm btn-outline-primary float-end">
+                                Add Questions
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    Quick Actions
+                </div>
+                <div class="card-body">
+                    <a href="{% url 'add_question' %}" class="btn btn-success w-100 mb-2">
+                        Add New Questions
+                    </a>
+                    <a href="#" class="btn btn-primary w-100 mb-2">
+                        View Student Results
+                    </a>
+                    <a href="#" class="btn btn-info w-100">
+                        Create New Exam
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

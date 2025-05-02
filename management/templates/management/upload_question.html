@@ -1,0 +1,24 @@
+{% extends 'layout.html' %}
+
+{% block title %}Admin{% endblock %}
+
+{% block body %}
+<div class="container mt-5 mb-5">
+<div class="row mt-5">
+  <h1 class="text-center">
+    Ավելացնել հարցեր
+  </h1>
+</div>
+<div class="row mt-3">
+  <form action="{% url 'upload_question' %}" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label for="formFile" class="form-label">Բեռնել CSV ֆայլ.</label>
+      <input class="form-control" type="file" accept=".csv" id="formFile" name="qFile" required>
+    </div>
+    <br>
+    <button type="submit" class="btn btn-primary w-100">Բեռնել</button>
+  </form>
+</div>
+</div>
+{% endblock %}
