@@ -89,6 +89,7 @@ class TestQuestion(models.Model):
 
     def __str__(self):
         return f"{self.question}"
+        # return f"{self.subject}: {self.question[:50]}..."
 
 class MidtermExam(models.Model):
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
