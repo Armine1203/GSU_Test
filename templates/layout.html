@@ -25,44 +25,42 @@
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav">
                 {% if request.user.is_authenticated %}
-                {% if request.user.is_staff %}
-                <li class="nav-item">
-                    <a class="nav-link text-center" href="{% url 'add_question' %}">Ավելացնել Հարցեր</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link text-center" href="{% url 'manage' %}">Կառավարել</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link text-center" href="{% url 'setting' %}">Կարգավորումներ</a>
-                </li>
-                {% else %}
+                    <!-- Show "My Page" first for students -->
+                    {% if not request.user.is_staff %}
+                    <li class="nav-item">
+                        <a class="nav-link text-center" href="{% url 'student_dashboard' %}">Իմ էջը</a>
+                    </li>
+                    {% endif %}
 
-                <li class="nav-item">
-                    <a class="nav-link text-center" href="{% url 'quiz' %}">Քննություն</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link text-center" href="{% url 'result' %}">Արդյունք</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link text-center" href="{% url 'leaderboard' %}">Առաջատար</a>
-                </li>
-                {% endif %}
-                <li class="nav-item">
-                    <a class="nav-link text-center" href="{% url 'logout' %}">Դուրս գալ</a>
-                </li>
+                    {% if request.user.is_staff %}
+                 <li class="nav-item">
+                        <a class="nav-link text-center" href="{% url 'lecturer_dashboard' %}">Իմ էջը</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-center" href="{% url 'add_question' %}">Ավելացնել Հարցեր</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-center" href="{% url 'manage' %}">Կառավարել</a>
+                    </li>
+
+                    {% else %}
+<!--                    <li class="nav-item">-->
+<!--                        <a class="nav-link text-center" href="{% url 'quiz' %}">Քննություն</a>-->
+<!--                    </li>-->
+                    <li class="nav-item">
+                        <a class="nav-link text-center" href="{% url 'results' %}">Արդյունք</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-center" href="{% url 'leaderboard' %}">Առաջատար</a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item">
+                        <a class="nav-link text-center" href="{% url 'logout' %}">Դուրս գալ</a>
+                    </li>
                 {% else %}
-                <li class="nav-item">
-                    <a class="nav-link text-center" href="{% url 'login' %}">Մուտք</a>
-                </li>
-                <!--          <li class="nav-item">-->
-                <!--            <a class="nav-link text-center" href="{% url 'register' %}">Գրանցում</a>-->
-                <!--          </li>-->
-                {% endif %}
-                <!-- In the navbar section, add this for student users -->
-                {% if request.user.is_authenticated and not request.user.is_staff %}
-                <li class="nav-item">
-                    <a class="nav-link text-center" href="{% url 'student_dashboard' %}">My Dashboard</a>
-                </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-center" href="{% url 'login' %}">Մուտք</a>
+                    </li>
                 {% endif %}
             </ul>
         </div>

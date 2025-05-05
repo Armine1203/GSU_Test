@@ -6,57 +6,101 @@
 <div class="container mt-5 mb-5">
 <form method="post" action="{% url 'add_question' %}" enctype="multipart/form-data">
   {% csrf_token %}
-  <h1 class="text-center">
-    Ավելացնել հարցեր
-  </h1>
-  <br><br>
+  <input type="hidden" name="question_count" value="{{ question_count }}">
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0">
+      Ավելացնել հարցեր
+    </h1>
+    <a href="{% url 'select_question_count' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i> Փոխել քանակը
+    </a>
+  </div>
+
+  <!-- Subject selection dropdown -->
+  <div class="mb-4">
+    <label for="subjectSelect" class="form-label">Ընտրել առարկան</label>
+    <select class="form-select" id="subjectSelect" name="subject" required>
+      <option disabled value="">Ընտրեք առարկան</option>
+      {% for subject in subjects %}
+        <option value="{{ subject.id }}"
+                {% if selected_subject and selected_subject.id == subject.id %}selected{% endif %}>
+          {{ subject.name }} ({{ subject.major.name }})
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+
   {% for i in questions %}
-  <div class="mb-3">
-    <label for="InputQuestion{{ i }}" class="form-label">
-      Հարց {{ i }}
-    </label>
-    <input type="text" class="form-control" id="InputQuestion{{ i }}" name="q{{ i }}" placeholder="Հարց {{ i }}" required autofocus>
-  </div>
+  <div class="card mb-4 shadow-sm">
+    <div class="card-header bg-light">
+      <h5 class="mb-0" style="color:black;">Հարց {{ i }}</h5>
+    </div>
+    <div class="card-body">
+      <div class="mb-3">
+        <label for="InputQuestion{{ i }}" class="form-label">Հարցի տեքստ</label>
+        <textarea class="form-control" id="InputQuestion{{ i }}" name="q{{ i }}" rows="2" required></textarea>
+      </div>
 
-  <!-- Add image upload field -->
-  <div class="mb-3">
-    <label for="questionImage{{ i }}" class="form-label">Նկար (ըստ ցանկության)</label>
-    <input type="file" class="form-control" id="questionImage{{ i }}" name="q{{ i }}image" accept="image/*">
-  </div>
+      <!-- Image upload field -->
+      <div class="mb-3">
+        <label for="questionImage{{ i }}" class="form-label">Նկար (ըստ ցանկության)</label>
+        <input type="file" class="form-control" id="questionImage{{ i }}" name="q{{ i }}image" accept="image/*">
+      </div>
 
-  <div class="row">
-    <div class="col">
-      <input type="text" class="form-control" placeholder="Տարբերակ 1" name="q{{ i }}o1" required>
-    </div>
-    <div class="col">
-      <input type="text" class="form-control" placeholder="Տարբերակ 2" name="q{{ i }}o2" required>
-    </div>
-    <div class="col">
-      <input type="text" class="form-control" placeholder="Տարբերակ 3" name="q{{ i }}o3" required>
-    </div>
-    <div class="col">
-      <input type="text" class="form-control" placeholder="Տարբերակ 4" name="q{{ i }}o4" required>
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <label for="option1{{ i }}" class="form-label">Տարբերակ 1</label>
+          <input type="text" class="form-control" id="option1{{ i }}" name="q{{ i }}o1" required>
+        </div>
+        <div class="col-md-6">
+          <label for="option2{{ i }}" class="form-label">Տարբերակ 2</label>
+          <input type="text" class="form-control" id="option2{{ i }}" name="q{{ i }}o2" required>
+        </div>
+        <div class="col-md-6">
+          <label for="option3{{ i }}" class="form-label">Տարբերակ 3</label>
+          <input type="text" class="form-control" id="option3{{ i }}" name="q{{ i }}o3" required>
+        </div>
+        <div class="col-md-6">
+          <label for="option4{{ i }}" class="form-label">Տարբերակ 4</label>
+          <input type="text" class="form-control" id="option4{{ i }}" name="q{{ i }}o4" required>
+        </div>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label for="correctOption{{ i }}" class="form-label">Ճիշտ պատասխան</label>
+          <select class="form-select" id="correctOption{{ i }}" name="q{{ i }}c" required>
+            <option selected disabled value=''>Ընտրեք ճիշտ տարբերակը</option>
+            <option value="A">Տարբերակ 1</option>
+            <option value="B">Տարբերակ 2</option>
+            <option value="C">Տարբերակ 3</option>
+            <option value="D">Տարբերակ 4</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label for="score{{ i }}" class="form-label">Միավոր</label>
+          <input type="number" class="form-control" id="score{{ i }}" name="q{{ i }}score" min="1" value="1" required>
+        </div>
+      </div>
     </div>
   </div>
-  <br>
-  <select class="form-select" name="q{{ i }}c" required>
-    <option selected disabled value=''>Ընտրեք ճիշտ տարբերակը</option>
-    <option value="A">1</option>
-    <option value="B">2</option>
-    <option value="C">3</option>
-    <option value="D">4</option>
-  </select>
-  <br>
   {% endfor %}
-  <br>
-  <div class="mb-3 form-check">
-    <input type="checkbox" class="form-check-input" id="exampleCheck1" required>
-    <label class="form-check-label" for="exampleCheck1">
-      Հաստատում եմ
-    </label>
+
+  <div class="card mb-4 shadow-sm">
+    <div class="card-body">
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="confirmationCheck" required>
+        <label class="form-check-label" for="confirmationCheck">
+          Հաստատում եմ, որ բոլոր տվյալները ճիշտ են
+        </label>
+      </div>
+    </div>
   </div>
-  <br><br><br>
-  <button type="submit" class="btn btn-primary w-100">Ուղարկել</button>
+
+  <button type="submit" class="btn btn-primary btn-lg w-100">
+    <i class="bi bi-save"></i> Պահպանել բոլոր հարցերը
+  </button>
 </form>
 </div>
 {% endblock %}

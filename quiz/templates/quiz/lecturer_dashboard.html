@@ -1,50 +1,553 @@
 {% extends 'layout.html' %}
 
-{% block title %}Lecturer Dashboard{% endblock %}
-
+{% block title %}Դասախոսի վահանակ{% endblock %}
 {% block body %}
 <div class="container mt-5 mb-5">
-    <h1 class="text-center">Lecturer Dashboard</h1>
+    <!-- Header Section -->
+    <div class="row">
+        <div class="col">
+            <h1 class="text-center">
+                Բարի գալուստ, {{ lecturer.user.get_full_name|default:lecturer.user.username }}
+            </h1>
+        </div>
+    </div>
 
+    <!-- Subjects Card (Full Width) -->
     <div class="row mt-4">
-        <div class="col-md-6">
+        <div class="col-12">
             <div class="card">
                 <div class="card-header bg-primary text-white">
-                    My Subjects
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>Իմ առարկաները</span>
+                        <span class="badge bg-light text-primary">{{ subjects.count }} առարկա</span>
+                    </div>
                 </div>
                 <div class="card-body">
-                    <ul class="list-group">
-                        {% for subject in subjects %}
-                        <li class="list-group-item">
-                            {{ subject.name }} ({{ subject.major }})
-                            <a href="{% url 'add_question' %}?subject={{ subject.id }}" class="btn btn-sm btn-outline-primary float-end">
-                                Add Questions
-                            </a>
-                        </li>
-                        {% endfor %}
-                    </ul>
+                    {% if subjects %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                            <tr>
+                                <th>Անվանում</th>
+                                <th>Մասնագիտություն</th>
+                                <th>Հարցերի քանակ</th>
+                                <th>Գործողություններ</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for subject in subjects %}
+                            <tr>
+                                <td>{{ subject.name }}</td>
+                                <td>{{ subject.major.name }}</td>
+                                <td>
+                                    <span class="badge bg-info">
+                                        {{ subject.testquestion_set.count }} հարց
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a href="{% url 'select_question_count' %}?subject={{ subject.id }}"
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-plus-circle"></i> Հարց ավելացնել
+                                        </a>
+                                        <a href="{% url 'view_questions' subject.id %}"
+                                           class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-eye"></i> Տեսնել
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        Ձեզ դեռ ոչ մի առարկա չի նշանակվել։ Խնդրում ենք դիմել ադմինիստրացիային։
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
+    </div>
 
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header bg-success text-white">
-                    Quick Actions
-                </div>
-                <div class="card-body">
-                    <a href="{% url 'add_question' %}" class="btn btn-success w-100 mb-2">
-                        Add New Questions
-                    </a>
-                    <a href="#" class="btn btn-primary w-100 mb-2">
-                        View Student Results
-                    </a>
-                    <a href="#" class="btn btn-info w-100">
-                        Create New Exam
-                    </a>
+    <!-- Actions Card  -->
+<div class="row justify-content-center mt-4">
+    <div class="col-12">
+        <div class="card h-100">
+            <div class="card-header bg-success text-white">
+                Արագ գործողություններ
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-12 col-sm-6 col-lg-3">
+                        <a href="{% url 'select_question_count' %}"
+                           class="btn btn-success btn-lg w-100 btn-fit-text">
+                            <i class="bi bi-plus-circle me-1"></i> Նոր հարցեր ավելացնել
+                        </a>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-3">
+                        <button class="btn btn-primary btn-lg w-100 btn-fit-text"
+                                data-bs-toggle="modal" data-bs-target="#resultsModal">
+                            <i class="bi bi-bar-chart me-1"></i> Ուսանողների արդյունքները
+                        </button>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-3">
+                        <button class="btn btn-info btn-lg w-100 btn-fit-text"
+                                data-bs-toggle="modal" data-bs-target="#examModal">
+                            <i class="bi bi-file-earmark-text me-1"></i> Ստեղծել նոր քննություն
+                        </button>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-3">
+                        <a href="{% url 'add_subject' %}"
+                           class="btn btn-success btn-lg w-100 btn-fit-text">
+                            <i class="bi bi-plus-lg me-1"></i> Ավելացնել առարկա
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+
+</div>
+
+<!-- Results Modal -->
+<div class="modal fade" id="resultsModal" tabindex="-1" aria-labelledby="resultsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="resultsModalLabel">Ուսանողների արդյունքները</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Content will be loaded via AJAX -->
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Exam Creation Modal -->
+<div class="modal fade" id="examModal" tabindex="-1" aria-labelledby="examModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="examModalLabel">Ստեղծել նոր քննություն</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="examForm" class="text-white">
+                    {% csrf_token %}
+
+                    <!-- Subject Selection -->
+                    <div class="mb-3">
+                        <label for="examSubject" class="form-label text-white">Առարկա</label>
+                        <select class="form-select bg-dark text-white border-secondary" id="examSubject" required>
+                            {% for subject in subjects %}
+                            <option value="{{ subject.id }}">{{ subject.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Group Selection -->
+                    <div class="mb-3">
+                        <label for="examGroup" class="form-label text-white">Խումբ</label>
+                        <select class="form-select bg-dark text-white border-secondary" id="examGroup" required
+                                disabled>
+                            <option value="">Ընտրեք առարկան նախ</option>
+                        </select>
+                        <div class="spinner-border spinner-border-sm text-primary mt-2 d-none" id="groupSpinner"></div>
+                    </div>
+
+                    <!-- Date/Time -->
+                    <div class="mb-3">
+                        <label for="examDate" class="form-label text-white">Ամսաթիվ և ժամ</label>
+                        <input type="datetime-local" class="form-control bg-dark text-white border-secondary"
+                               id="examDate" required>
+                    </div>
+
+                    <!-- Duration -->
+                    <div class="mb-3">
+                        <label for="examDuration" class="form-label text-white">Տևողություն (րոպե)</label>
+                        <input type="number" class="form-control bg-dark text-white border-secondary"
+                               id="examDuration" min="10" value="40" required>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="btn btn-primary w-100">Ստեղծել</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New Questions Modal -->
+<div class="modal fade" id="questionsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Հարցերի ցանկ</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                        <tr>
+                            <th>Հարց</th>
+                            <th>Տարբերակներ</th>
+                            <th>Ճիշտ պատասխան</th>
+                            <th>Գործողություններ</th>
+                        </tr>
+                        </thead>
+                        <tbody id="questionsTableBody">
+                        <!-- Will be populated via AJAX -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Question Modal -->
+<div class="modal fade" id="editQuestionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-white">
+                <h5 class="modal-title">Խմբագրել հարցը</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editQuestionForm">
+                    {% csrf_token %}
+                    <input type="hidden" id="editQuestionId">
+                    <div class="mb-3">
+                        <label class="form-label">Հարց</label>
+                        <textarea class="form-control" id="editQuestionText" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Նկար</label>
+                        <input type="file" class="form-control" id="editQuestionImage">
+                        <div id="currentImageContainer" class="mt-2"></div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Տարբերակ 1</label>
+                            <input type="text" class="form-control" id="editOption1" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Տարբերակ 2</label>
+                            <input type="text" class="form-control" id="editOption2" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Տարբերակ 3</label>
+                            <input type="text" class="form-control" id="editOption3" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Տարբերակ 4</label>
+                            <input type="text" class="form-control" id="editOption4" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ճիշտ պատասխան</label>
+                        <select class="form-select" id="editCorrectOption" required>
+                            <option value="A">Տարբերակ 1</option>
+                            <option value="B">Տարբերակ 2</option>
+                            <option value="C">Տարբերակ 3</option>
+                            <option value="D">Տարբերակ 4</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Միավոր</label>
+                        <input type="number" class="form-control" id="editScore" min="1" value="1" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Պահպանել</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Load groups when subject changes in exam creation
+        document.getElementById('examSubject').addEventListener('change', function() {
+            const subjectId = this.value;
+            const groupSelect = document.getElementById('examGroup');
+            const spinner = document.getElementById('groupSpinner');
+
+            if (!subjectId) {
+                groupSelect.innerHTML = '<option value="">Ընտրեք առարկան նախ</option>';
+                groupSelect.disabled = true;
+                return;
+            }
+
+            // Show loading state
+            groupSelect.innerHTML = '<option value="">Բեռնվում է...</option>';
+            groupSelect.disabled = true;
+            spinner.classList.remove('d-none');
+
+            fetch(`/api/groups/?subject=${subjectId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    groupSelect.innerHTML = '';
+
+                    if (data.groups && data.groups.length > 0) {
+                        // Add default option
+                        const defaultOption = document.createElement('option');
+                        defaultOption.value = '';
+                        defaultOption.textContent = 'Ընտրեք խումբ';
+                        groupSelect.appendChild(defaultOption);
+
+                        // Add group options
+                        data.groups.forEach(group => {
+                            const option = document.createElement('option');
+                            option.value = group.id;
+                            option.textContent = group.name;
+                            groupSelect.appendChild(option);
+                        });
+                        groupSelect.disabled = false;
+                    } else {
+                        const option = document.createElement('option');
+                        option.value = '';
+                        option.textContent = 'Խմբեր չեն գտնվել';
+                        groupSelect.appendChild(option);
+                        groupSelect.disabled = true;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading groups:', error);
+                    groupSelect.innerHTML = '<option value="">Սխալ բեռնման ժամանակ</option>';
+                    groupSelect.disabled = true;
+                })
+                .finally(() => {
+                    spinner.classList.add('d-none');
+                });
+        });
+        // Handle exam form submission
+        document.getElementById('examForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const subjectId = document.getElementById('examSubject').value;
+            const groupId = document.getElementById('examGroup').value;
+            const examDate = document.getElementById('examDate').value;
+            const duration = document.getElementById('examDuration').value;
+
+            if (!subjectId || !groupId || !examDate || !duration) {
+                alert('Խնդրում ենք լրացնել բոլոր դաշտերը');
+                return;
+            }
+
+            // Submit the form data to your backend
+            fetch('{% url "create_exam" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    subject: subjectId,
+                    group: groupId,
+                    due_date: examDate,
+                    time_limit: duration
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw err; });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    alert('Քննությունը հաջողությամբ ստեղծված է');
+                    $('#examModal').modal('hide');
+                    // Optionally refresh the page or update UI
+                } else {
+                    throw new Error(data.error || 'Unknown error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Սխալ քննությունը ստեղծելիս: ' + error.message);
+            });
+        });
+
+            // Load results when modal opens
+            $('#resultsModal').on('show.bs.modal', function () {
+                fetch('{% url "lecturer_results" %}')
+                    .then(response => response.text())
+                    .then(html => {
+                        document.querySelector('#resultsModal .modal-body').innerHTML = html;
+                    });
+            });
+
+            // Load questions when view button is clicked
+            document.querySelectorAll('[data-subject-id]').forEach(button => {
+                button.addEventListener('click', function () {
+                    const subjectId = this.getAttribute('data-subject-id');
+                    loadQuestions(subjectId);
+                });
+            });
+
+            function loadQuestions(subjectId) {
+                fetch(`/api/questions/?subject=${subjectId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const tbody = document.getElementById('questionsTableBody');
+                        tbody.innerHTML = '';
+
+                        data.questions.forEach(question => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${question.text}</td>
+                                <td>
+                                    <ol>
+                                        <li>${question.option1}</li>
+                                        <li>${question.option2}</li>
+                                        <li>${question.option3}</li>
+                                        <li>${question.option4}</li>
+                                    </ol>
+                                </td>
+                                <td>${question.correct_option}</td>
+
+                                <td>
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-outline-primary edit-btn"
+                                                data-id="${question.id}">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger delete-btn"
+                                                data-id="${question.id}">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            `;
+                            tbody.appendChild(row);
+                        });
+
+                        initializeQuestionActions();
+                        $('#questionsModal').modal('show');
+                    });
+            }
+
+            function initializeQuestionActions() {
+                // Edit buttons
+                document.querySelectorAll('.edit-btn').forEach(btn => {
+                    btn.addEventListener('click', function () {
+                        const questionId = this.getAttribute('data-id');
+                        loadQuestionForEdit(questionId);
+                    });
+                });
+
+                // Delete buttons
+                document.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.addEventListener('click', function () {
+                        const questionId = this.getAttribute('data-id');
+                        if (confirm('Հաստատում եք հարցի ջնջումը?')) {
+                            deleteQuestion(questionId);
+                        }
+                    });
+                });
+            }
+
+            function loadQuestionForEdit(questionId) {
+                fetch(`/api/questions/${questionId}/`)
+                    .then(response => response.json())
+                    .then(question => {
+                        document.getElementById('editQuestionId').value = question.id;
+                        document.getElementById('editQuestionText').value = question.text;
+                        document.getElementById('editOption1').value = question.option1;
+                        document.getElementById('editOption2').value = question.option2;
+                        document.getElementById('editOption3').value = question.option3;
+                        document.getElementById('editOption4').value = question.option4;
+                        document.getElementById('editCorrectOption').value = question.correct_option;
+                        document.getElementById('editScore').value = question.score;
+
+                        const imageContainer = document.getElementById('currentImageContainer');
+                        if (question.image) {
+                            imageContainer.innerHTML = `
+                                <p>Ընթացիկ նկար:</p>
+                                <img src="${question.image}" class="img-thumbnail" style="max-height: 150px;">
+                            `;
+                        } else {
+                            imageContainer.innerHTML = '<p>Նկար չկա</p>';
+                        }
+
+                        $('#editQuestionModal').modal('show');
+                    });
+            }
+
+            function deleteQuestion(questionId) {
+                fetch(`/api/questions/${questionId}/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json'
+                    }
+                })
+                    .then(response => {
+                        if (response.ok) {
+                            alert('Հարցը հաջողությամբ ջնջված է');
+                            const subjectId = document.querySelector('#questionsModal').getAttribute('data-current-subject');
+                            loadQuestions(subjectId);
+                        } else {
+                            alert('Սխալ հարցը ջնջելիս');
+                        }
+                    });
+            }
+
+            // Handle edit form submission
+            document.getElementById('editQuestionForm').addEventListener('submit', function (e) {
+                e.preventDefault();
+
+                const formData = new FormData();
+                formData.append('text', document.getElementById('editQuestionText').value);
+                formData.append('option1', document.getElementById('editOption1').value);
+                formData.append('option2', document.getElementById('editOption2').value);
+                formData.append('option3', document.getElementById('editOption3').value);
+                formData.append('option4', document.getElementById('editOption4').value);
+                formData.append('correct_option', document.getElementById('editCorrectOption').value);
+                formData.append('score', document.getElementById('editScore').value);
+
+                const imageInput = document.getElementById('editQuestionImage');
+                if (imageInput.files[0]) {
+                    formData.append('image', imageInput.files[0]);
+                }
+
+                fetch(`/api/questions/${document.getElementById('editQuestionId').value}/`, {
+                    method: 'PUT',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: formData
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Հարցը հաջողությամբ թարմացված է');
+                            $('#editQuestionModal').modal('hide');
+                            const subjectId = document.querySelector('#questionsModal').getAttribute('data-current-subject');
+                            loadQuestions(subjectId);
+                        } else {
+                            alert('Սխալ հարցը թարմացնելիս');
+                        }
+                    });
+            });
+        });
+</script>

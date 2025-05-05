@@ -1,0 +1,41 @@
+{% extends 'layout.html' %}
+
+{% block title %}Select Question Count{% endblock %}
+
+{% block body %}
+<div class="container mt-5 mb-5">
+  <form method="post" action="{% url 'select_question_count' %}">
+    {% csrf_token %}
+    <h1 class="text-center mb-4">
+      Ավելացնել նոր հարցեր
+    </h1>
+
+    <div class="card shadow">
+      <div class="card-body">
+        <!-- Subject selection -->
+        <div class="mb-4">
+          <label for="subjectSelect" class="form-label fs-5">Ընտրել առարկան</label>
+          <select class="form-select form-select-lg" id="subjectSelect" name="subject" required>
+            <option selected disabled value="">Ընտրեք առարկան</option>
+            {% for subject in subjects %}
+              <option value="{{ subject.id }}">{{ subject.name }} ({{ subject.major.name }})</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Question count input -->
+        <div class="mb-4">
+          <label for="questionCount" class="form-label fs-5">Հարցերի քանակ</label>
+          <input type="number" class="form-control form-control-lg" id="questionCount" 
+                name="question_count" min="1" max="50" value="10" required>
+          <div class="form-text">Մուտքագրեք 1-50 միջակայքում գտնվող թիվ</div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg w-100 mt-3">
+          <i class="bi bi-arrow-right"></i> Շարունակել
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}

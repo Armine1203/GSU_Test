@@ -1,10 +1,9 @@
 from django.urls import path
 from . import views
+from .views import UploadQuestion, DownloadQuestionTemplate
 
 urlpatterns = [
     path("", views.Manage.as_view(), name="manage"),
-    path("results/", views.Results.as_view(), name="results"),
-    path("upload_questions", views.UploadQuestion.as_view(), name="upload_question"),
-    path("verify_questions/", views.VerifyQuestion.as_view(), name="verify_question"),
-    path("setting/", views.Setting.as_view(), name="setting")
+    path('upload_questions/', UploadQuestion.as_view(), name='upload_question'),
+    path('download-question-template/', DownloadQuestionTemplate.as_view(), name='download_question_template'),
 ]

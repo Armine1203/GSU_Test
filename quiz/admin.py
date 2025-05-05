@@ -9,20 +9,6 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 
-# Custom User Admin
-#class CustomUserAdmin(UserAdmin):
-#    list_display = ('username', 'email', 'first_name', 'last_name', 'user_type', 'is_staff')
-#    list_filter = ('user_type', 'is_staff')
-#    fieldsets = (
-#        (None, {'fields': ('username', 'password')}),
-#        ('Personal info', {'fields': ('first_name', 'last_name', 'email')}),
-#        ('Permissions', {
-#            'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions', 'user_type'),
-#        }),
-#        ('Important dates', {'fields': ('last_login', 'date_joined')}),
-#    )
-
-
 # Register your models here
 class FacultyAdmin(admin.ModelAdmin):
     list_display = ('name',)
@@ -73,10 +59,9 @@ class SubjectAdmin(admin.ModelAdmin):
 
 
 class TestQuestionAdmin(admin.ModelAdmin):
-    list_display = ('question_short', 'subject', 'correct_option', 'score', 'creator', 'verified')
-    list_filter = ('subject', 'verified', 'creator')
+    list_display = ('question_short', 'subject', 'correct_option', 'score', 'creator')
+    list_filter = ('subject', 'creator')
     search_fields = ('question', 'subject__name')
-    list_editable = ('verified',)
 
     def question_short(self, obj):
         return obj.question[:50] + '...' if len(obj.question) > 50 else obj.question

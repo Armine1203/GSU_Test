@@ -1,3 +1,6 @@
+import csv
+
+from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.views import View
 from django.urls import reverse
@@ -5,7 +8,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.utils.decorators import method_decorator
 from django.contrib.admin.views.decorators import staff_member_required
-from quiz.models import Mark, TestQuestion
+from quiz.models import Mark, TestQuestion, Subject
 from os.path import join
 
 # Create your views here.
@@ -16,10 +19,6 @@ class Manage(View):
             "Ավելացնել հարցեր": {
                 "link": reverse("upload_question"),
                 "btntxt": "Բեռնել"
-            },
-            "Ստուգել հարցերը": {
-                "link": reverse("verify_question"),
-                "btntxt": "Ստուգել"
             },
             "Ստանալ արդյունքները": {
                 "link": reverse("results"),
@@ -32,62 +31,116 @@ class Manage(View):
             {"panel_options": panel_options}
         )
 
-@method_decorator(staff_member_required, name="dispatch")
-class Results(View):
-    def get(self, request):
-        return render(request, "management/results.html", {"results": Mark.objects.all()})
+# @method_decorator(staff_member_required, name="dispatch")
+# class Results(View):
+#     def get(self, request):
+#         return render(request, "quiz/results.html", {"results": Mark.objects.all()})
 
-@method_decorator(staff_member_required, name="dispatch")
 class UploadQuestion(View):
     def get(self, request):
-        return render(request, "management/upload_question.html")
+        if request.user.is_staff:
+            subjects = Subject.objects.all()
+        elif hasattr(request.user, 'lecturer'):
+            subjects = request.user.lecturer.subjects.all()
+        else:
+            messages.error(request, "You don't have permission to upload questions")
+            return redirect("index")
+
+        return render(request, "management/upload_question.html", {
+            'subjects': subjects
+        })
 
     def post(self, request):
-        qFile = request.FILES["qFile"]
-        filepath = join(settings.BASE_DIR, "upload", "questions.csv")
-        if not str(qFile).endswith(".csv"):
-            messages.warning(request, "Only CSV file allowed")
-        else:
-            with open(filepath, "wb") as f:
-                for chunk in qFile.chunks():
-                    f.write(chunk)
-            messages.success(request, "CSV file uploaded")
-        return redirect("manage")
+        q_file = request.FILES.get("qFile")
+        subject_id = request.POST.get("subject")
+
+        # Validate file
+        if not q_file or not str(q_file).endswith(".csv"):
+            messages.warning(request, "Please upload a valid CSV file")
+            return redirect("upload_question")
+
+        # Validate subject selection
+        if not subject_id:
+            messages.warning(request, "Please select a subject")
+            return redirect("upload_question")
+
+        try:
+            subject = Subject.objects.get(id=subject_id)
+
+            # Verify permission
+            if not request.user.is_staff:
+                if not hasattr(request.user, 'lecturer'):
+                    messages.error(request, "Only lecturers can upload questions")
+                    return redirect("index")
+                if not subject.lecturers.filter(id=request.user.id).exists():
+                    messages.error(request, "You don't teach this subject")
+                    return redirect("upload_question")
+
+            # Process CSV
+            decoded_file = q_file.read().decode('utf-8').splitlines()
+            reader = csv.DictReader(decoded_file)
+
+            created_count = 0
+            error_rows = []
+
+            for i, row in enumerate(reader, start=2):  # start=2 for 1-based row numbering
+                try:
+                    TestQuestion.objects.create(
+                        subject=subject,
+                        question=row['question'],
+                        option1=row['option1'],
+                        option2=row['option2'],
+                        option3=row['option3'],
+                        option4=row['option4'],
+                        correct_option=row['correct_option'].upper(),
+                        score=int(row.get('score', 1)),
+                        creator=request.user
+                    )
+                    created_count += 1
+                except Exception as e:
+                    error_rows.append(f"Row {i}: {str(e)}")
+                    continue
+
+            if created_count:
+                messages.success(request, f"Successfully uploaded {created_count} questions")
+            if error_rows:
+                messages.warning(request, f"Errors in {len(error_rows)} rows")
+                for error in error_rows[:3]:  # Show first 3 errors
+                    messages.info(request, error)
+
+        except Subject.DoesNotExist:
+            messages.error(request, "Selected subject doesn't exist")
+        except Exception as e:
+            messages.error(request, f"Error processing file: {str(e)}")
+
+        return redirect("upload_question")
 
 @method_decorator(staff_member_required, name="dispatch")
-class VerifyQuestion(View):
+class DownloadQuestionTemplate(View):
     def get(self, request):
-        qs = TestQuestion.objects.filter(verified=False)
-        return render(request, "management/verify_question.html", {"questions": qs})
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="question_template.csv"'
 
-    def post(self, request):
-        count = 0
-        for q, v in request.POST.items():
-            if q.startswith("q") and v == "on":
-                id = q[1:]
-                q = TestQuestion.objects.filter(id=id).first()
-                if q is not None:
-                    q.verified = True
-                    q.save()
-                    count += 1
-                else:
-                    messages.warning(request, f"No question exists with id {id}")
-        messages.success(request, f"{count} questions added")
-        return redirect("manage")
+        writer = csv.writer(response)
+        writer.writerow([
+            'question',
+            'option1',
+            'option2',
+            'option3',
+            'option4',
+            'correct_option',
+            'score'
+        ])
 
-@method_decorator(staff_member_required, name="dispatch")
-class Setting(View):
-    def get(self, request):
-        info = {
-            "question_limit": settings.GLOBAL_SETTINGS["questions"]
-        }
-        return render(request, "management/setting.html", {"info": info})
+        # Add example row
+        writer.writerow([
+            'Ո՞րն է մայրաքաղաքը...',
+            'Երևան',
+            'Մոսկվա',
+            'Տոկիո',
+            'Պարիզ',
+            'A',
+            '1'
+        ])
 
-    def post(self, request):
-        qlimit = int(request.POST.get("qlimit", 10))
-        if qlimit > 0:
-            settings.GLOBAL_SETTINGS["questions"] = qlimit
-            messages.success(request, "Դուք հաջողությամբ պահպանել եք կարգավորումները")
-        else:
-            messages.warning(request, "Question limit can't be 0 or less than 0")
-        return redirect("setting")
+        return response

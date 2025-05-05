@@ -1,0 +1,67 @@
+{% extends 'layout.html' %}
+
+{% block title %}Ավելացնել առարկա{% endblock %}
+
+{% block body %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4>Ավելացնել նոր առարկա</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label class="form-label">Անվանում</label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                            <div class="text-danger">{{ form.name.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Մասնագիտություն</label>
+                            {{ form.major }}
+                            {% if form.major.errors %}
+                            <div class="text-danger">{{ form.major.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Կուրս(1, 2, ․․․, 5)</label>
+                            {{ form.course }}
+                            {% if form.course.errors %}
+                            <div class="text-danger">{{ form.course.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Տարի(2025)</label>
+                            {{ form.year }}
+                            {% if form.year.errors %}
+                            <div class="text-danger">{{ form.year.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Կիսամյակ</label>
+                            {{ form.semester }}
+                            {% if form.semester.errors %}
+                            <div class="text-danger">{{ form.semester.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">Պահպանել</button>
+                            <a href="{% url 'lecturer_dashboard' %}" class="btn btn-secondary">Չեղարկել</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
