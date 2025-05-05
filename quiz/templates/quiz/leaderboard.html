@@ -1,73 +1,115 @@
 {% extends 'layout.html' %}
 
-{% block title %}Խմբային վարկանիշ{% endblock %}
+{% block title %}Քննությունների արդյունքներ{% endblock %}
 
 {% block body %}
 <div class="container mt-5 mb-5">
-    <div class="row">
-        <h1 class="text-center">Խմբային վարկանիշ</h1>
-        {% if current_group %}
-            <h4 class="text-center text-muted">{{ current_group.name }} խումբ</h4>
-        {% endif %}
-    </div>
-
-    {% if not results %}
-    <div class="alert alert-warning text-center mt-4">
-        {% if not current_group %}
-            Դուք դեռ չեք պատկանում որևէ խմբի։
-        {% else %}
-            Ձեր խումբը դեռ չունի թեստերի արդյունքներ։
-        {% endif %}
-    </div>
-    {% else %}
-    <div class="row mt-4">
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead class="table-primary">
-                    <tr>
-                        <th scope="col">#</th>
-                        <th scope="col">Աշակերտ</th>
-                        <th scope="col">ID</th>
-                        <th scope="col">Միավորներ</th>
-                        <th scope="col">Արդյունք</th>
-                        <th scope="col">Տոկոս</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for result in results %}
-                    <tr {% if result.user == request.user %}class="table-active"{% endif %}>
-                        <th scope="row">
-                            {{ forloop.counter }}
-                            {% if forloop.first %}🏆{% endif %}
-                        </th>
-                        <td>
-                            {{ result.student.name }} {{ result.student.last_name }}
-                            {% if result.user == request.user %}<small>(Դուք)</small>{% endif %}
-                        </td>
-                        <td>{{ result.student.id_number }}</td>
-                        <td>{{ result.got }}</td>
-                        <td>{{ result.got }}/{{ result.total }}</td>
-                        <td>
-                            <div class="progress" style="height: 25px;">
-                                <div class="progress-bar
-                                    {% if result.percentage >= 80 %}bg-success
-                                    {% elif result.percentage >= 50 %}bg-warning
-                                    {% else %}bg-danger
-                                    {% endif %}"
-                                    role="progressbar"
-                                    style="width: {{ result.percentage }}%"
-                                    aria-valuenow="{{ result.percentage }}"
-                                    aria-valuemin="0"
-                                    aria-valuemax="100">
-                                    {{ result.percentage }}%
-                                </div>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    {% if user_type == 'lecturer' %}
+    <!-- Lecturer View -->
+    <div class="row mb-4">
+        <h1 class="text-center">Դասախոսի վահանակ</h1>
+        <div class="col-md-6 offset-md-3">
+            <form method="get" class="card">
+                <div class="card-header bg-info text-white">
+                    Ընտրել խումբ
+                </div>
+                <div class="card-body">
+                    <select name="group" class="form-select" onchange="this.form.submit()">
+                        <option value="">-- Ընտրել խումբ --</option>
+                        {% for group in groups %}
+                        <option value="{{ group.id }}"
+                            {% if selected_group and selected_group.id == group.id %}selected{% endif %}>
+                            {{ group.name }} ({{ group.major.name }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
         </div>
+    </div>
+    {% endif %}
+
+    {% if error %}
+    <div class="alert alert-danger text-center mt-4">
+        {{ error }}
+    </div>
+    {% elif no_exams %}
+    <div class="alert alert-warning text-center mt-4">
+        {% if user_type == 'student' %}
+        Ձեր խմբի համար դեռ քննություններ չեն ստեղծվել։
+        {% else %}
+        Ընտրված խմբի համար դեռ քննություններ չեն ստեղծվել։
+        {% endif %}
+    </div>
+    {% elif group_exams %}
+    <div class="row">
+        {% if user_type == 'lecturer' and selected_group %}
+        <h2 class="text-center mb-4">{{ selected_group.name }} խումբ</h2>
+        {% endif %}
+
+        {% for exam in group_exams %}
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5>{{ exam.subject.name }}</h5>
+                <small>Ամսաթիվ: {{ exam.due_date|date:"d.m.Y H:i" }}</small>
+                {% if user_type == 'lecturer' %}
+                <span class="badge bg-light text-dark float-end">
+                    {{ exam.questions.count }} հարց
+                </span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Ուսանող</th>
+                                <th>ID</th>
+                                <th>Միավոր</th>
+                                <th>Տոկոս</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for result in exam_results %}
+                            {% if result.exam.id == exam.id %}
+                            <tr {% if user_type == 'student' and result.student.user == request.user %}class="table-active"{% endif %}>
+                                <td>{{ forloop.counter }}</td>
+                                <td>
+                                    {{ result.student.name }} {{ result.student.last_name }}
+                                    {% if user_type == 'student' and result.student.user == request.user %}
+                                    <span class="badge bg-info">Դուք</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ result.student.id_number }}</td>
+                                <td>{{ result.score }}</td>
+                                <td>
+                                    <div class="progress" style="height: 25px;">
+                                        <div class="progress-bar
+                                            {% if result.percentage >= 80 %}bg-success
+                                            {% elif result.percentage >= 50 %}bg-warning
+                                            {% else %}bg-danger
+                                            {% endif %}"
+                                            style="width: {{ result.percentage }}%">
+                                            {{ result.percentage|floatformat:1 }}%
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% empty %}
+                            <tr>
+                                <td colspan="{% if user_type == 'lecturer' %}6{% else %}5{% endif %}" class="text-center">
+                                    Այս քննության համար արդյունքներ չկան
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
     </div>
     {% endif %}
 </div>

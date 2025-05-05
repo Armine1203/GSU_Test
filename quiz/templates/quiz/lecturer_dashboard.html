@@ -87,10 +87,10 @@
                             </a>
                         </div>
                         <div class="col-12 col-sm-6 col-lg-3">
-                            <button class="btn btn-primary btn-lg w-100 btn-fit-text"
-                                    data-bs-toggle="modal" data-bs-target="#resultsModal">
+                            <a href="{% url 'leaderboard' %}"
+                               class="btn btn-primary btn-lg w-100 btn-fit-text">
                                 <i class="bi bi-bar-chart me-1"></i> Ուսանողների արդյունքները
-                            </button>
+                            </a>
                         </div>
                         <div class="col-12 col-sm-6 col-lg-3">
                             <button class="btn btn-info btn-lg w-100 btn-fit-text"
@@ -150,7 +150,7 @@
                         <label class="form-label">{{ form.subject.label }}</label>
                         {{ form.subject }}
                         {% if form.subject.errors %}
-                            <div class="text-danger">{{ form.subject.errors }}</div>
+                        <div class="text-danger">{{ form.subject.errors }}</div>
                         {% endif %}
                     </div>
 
@@ -159,7 +159,7 @@
                         <label class="form-label">{{ form.group.label }}</label>
                         {{ form.group }}
                         {% if form.group.errors %}
-                            <div class="text-danger">{{ form.group.errors }}</div>
+                        <div class="text-danger">{{ form.group.errors }}</div>
                         {% endif %}
                     </div>
 
@@ -168,7 +168,7 @@
                         <label class="form-label">{{ form.due_date.label }}</label>
                         {{ form.due_date }}
                         {% if form.due_date.errors %}
-                            <div class="text-danger">{{ form.due_date.errors }}</div>
+                        <div class="text-danger">{{ form.due_date.errors }}</div>
                         {% endif %}
                     </div>
 
@@ -177,7 +177,7 @@
                         <label class="form-label">{{ form.time_limit.label }}</label>
                         {{ form.time_limit }}
                         {% if form.time_limit.errors %}
-                            <div class="text-danger">{{ form.time_limit.errors }}</div>
+                        <div class="text-danger">{{ form.time_limit.errors }}</div>
                         {% endif %}
                     </div>
 
@@ -186,13 +186,13 @@
                         <label class="form-label">{{ form.questions.label }}</label>
                         <div class="question-checkboxes">
                             {% for checkbox in form.questions %}
-                                <div class="form-check">
-                                    {{ checkbox }}
-                                </div>
+                            <div class="form-check">
+                                {{ checkbox }}
+                            </div>
                             {% endfor %}
                         </div>
                         {% if form.questions.errors %}
-                            <div class="text-danger">{{ form.questions.errors }}</div>
+                        <div class="text-danger">{{ form.questions.errors }}</div>
                         {% endif %}
                     </div>
 

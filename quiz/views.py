@@ -6,7 +6,7 @@ from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.views import View
 from .forms import SubjectForm, MidtermExamForm
-from .models import TestQuestion, Lecturer, Subject, Group, StudentAnswer,ExamResult, Mark, MidtermExam
+from .models import TestQuestion, Lecturer, Subject, Group, StudentAnswer, ExamResult, Mark, MidtermExam, Student
 from django.contrib import messages
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
@@ -227,29 +227,78 @@ class Result(View):
             "best_score": best_score
         })
 
+
 @method_decorator(login_required, name="dispatch")
 class Leaderboard(View):
     def get(self, request):
-        # Get all marks with related user data
-        marks = Mark.objects.select_related('user').all()
+        try:
+            if hasattr(request.user, 'student'):
+                # Student view (same as before)
+                student = request.user.student
+                current_group = student.group
+                group_exams = MidtermExam.objects.filter(
+                    group=current_group
+                ).select_related('subject').order_by('-due_date')
 
-        # Annotate each user with their average percentage
-        leaderboard_data = (
-            marks.values('user__id', 'user__username', 'user__first_name', 'user__last_name')
-            .annotate(
-                average_percentage=Avg(F('got') * 100.0 / F('total')),
-                total_tests=Count('id'),
-                total_score=Sum('got'),
-                max_score=Sum('total')
-            )
-            .order_by('-average_percentage')
-        )
+                exam_results = ExamResult.objects.filter(
+                    exam__group=current_group
+                ).select_related('student', 'exam')
 
-        context = {
-            'leaderboard': leaderboard_data,
-        }
-        return render(request, 'quiz/leaderboard.html', context)
-# In quiz/views.py
+                context = {
+                    'user_type': 'student',
+                    'current_group': current_group,
+                    'group_exams': group_exams,
+                    'exam_results': exam_results,
+                }
+
+            elif hasattr(request.user, 'lecturer'):
+                # Lecturer view
+                lecturer = request.user.lecturer
+                subjects = lecturer.subjects.all()
+                groups = Group.objects.filter(
+                    major__in=subjects.values('major')
+                ).distinct()
+
+                selected_group_id = request.GET.get('group')
+                selected_group = None
+                group_exams = MidtermExam.objects.none()
+                exam_results = ExamResult.objects.none()
+
+                if selected_group_id:
+                    selected_group = get_object_or_404(Group, id=selected_group_id)
+                    group_exams = MidtermExam.objects.filter(
+                        group=selected_group,
+                        subject__in=subjects
+                    ).select_related('subject').order_by('-due_date')
+
+                    exam_results = ExamResult.objects.filter(
+                        exam__in=group_exams
+                    ).select_related('student', 'exam')
+
+                context = {
+                    'user_type': 'lecturer',
+                    'subjects': subjects,
+                    'groups': groups,
+                    'selected_group': selected_group,
+                    'group_exams': group_exams,
+                    'exam_results': exam_results,
+                }
+
+            else:
+                return render(request, 'quiz/leaderboard.html', {
+                    'error': "Invalid user type"
+                })
+
+            # Common context for both user types
+            if not group_exams.exists():
+                context['no_exams'] = True
+
+            return render(request, 'quiz/leaderboard.html', context)
+
+        except AttributeError:
+            return render(request, 'quiz/leaderboard.html', {
+                'error': "Profile not found"
+            })
 
 @method_decorator(login_required, name="dispatch")
 class StudentDashboard(View):
