@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.views import View
 from django.views.decorators.http import require_POST
 
-from .forms import SubjectForm
+from .forms import SubjectForm, MidtermExamForm
 from .models import TestQuestion, Mark, Lecturer, Student, MidtermExam, Subject, Group, StudentAnswer
 from django.contrib import messages
 from django.utils.decorators import method_decorator
@@ -300,12 +300,15 @@ class LecturerDashboard(View):
         # Calculate statistics
         total_questions = TestQuestion.objects.filter(subject__in=subjects).count()
 
+        form = MidtermExamForm(user=request.user)
+
         return render(request, "quiz/lecturer_dashboard.html", {
             'lecturer': lecturer,
             'subjects': subjects,
             'total_questions': total_questions,
             'verified_questions': total_questions,
             'pending_questions': 0,
+            'form': form,
         })
 
 
@@ -483,53 +486,21 @@ def get_groups_for_subject(request):
         return JsonResponse({'groups': []}, status=404)
 
 
-@require_POST
+@login_required
 def create_exam(request):
-    if not request.user.is_authenticated or not hasattr(request.user, 'lecturer'):
-        return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=401)
-
-    try:
-        data = json.loads(request.body)
-        subject = Subject.objects.get(id=data['subject'])
-        group = Group.objects.get(id=data['group'])
-
-        # Verify the lecturer teaches this subject
-        if subject not in request.user.lecturer.subjects.all():
-            return JsonResponse({'success': False, 'error': 'You do not teach this subject'}, status=403)
-
-        # Verify the group belongs to the subject's major
-        if group.major != subject.major:
-            return JsonResponse({'success': False, 'error': 'Invalid group for this subject'}, status=400)
-
-        # Parse the datetime string
-        from django.utils.dateparse import parse_datetime
-        due_date = parse_datetime(data['due_date'])
-        if not due_date:
-            return JsonResponse({'success': False, 'error': 'Invalid date format'}, status=400)
-
-        # Create the exam
-        exam = MidtermExam.objects.create(
-            subject=subject,
-            group=group,
-            due_date=due_date,
-            time_limit=data['time_limit'],
-            created_by=request.user
-        )
-
-        return JsonResponse({
-            'success': True,
-            'exam_id': exam.id,
-            'message': 'Exam created successfully'
-        })
-
-    except Subject.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Subject not found'}, status=404)
-    except Group.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Group not found'}, status=404)
-    except KeyError as e:
-        return JsonResponse({'success': False, 'error': f'Missing field: {str(e)}'}, status=400)
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+    print("Woking Create Exam")
+    if request.method == 'POST':
+        form = MidtermExamForm(request.POST)
+        if form.is_valid():
+            exam = form.save(commit=False)
+            exam.created_by = request.user
+            exam.save()
+            form.save_m2m()
+            return redirect('lecturer_dashboard')
+        else:
+            return JsonResponse({'errors': form.errors}, status=400)
+    else:
+        return HttpResponseNotAllowed(['POST'])
 
 
 # views.py

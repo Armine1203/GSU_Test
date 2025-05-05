@@ -142,46 +142,12 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="examForm" class="text-white">
-                    {% csrf_token %}
+<form method="post" id="examForm" class="text-white" action="{% url 'create_exam' %}">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary w-100">Ստեղծել</button>
+</form>
 
-                    <!-- Subject Selection -->
-                    <div class="mb-3">
-                        <label for="examSubject" class="form-label text-white">Առարկա</label>
-                        <select class="form-select bg-dark text-white border-secondary" id="examSubject" required>
-                            {% for subject in subjects %}
-                            <option value="{{ subject.id }}">{{ subject.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <!-- Group Selection -->
-                    <div class="mb-3">
-                        <label for="examGroup" class="form-label text-white">Խումբ</label>
-                        <select class="form-select bg-dark text-white border-secondary" id="examGroup" required
-                                disabled>
-                            <option value="">Ընտրեք առարկան նախ</option>
-                        </select>
-                        <div class="spinner-border spinner-border-sm text-primary mt-2 d-none" id="groupSpinner"></div>
-                    </div>
-
-                    <!-- Date/Time -->
-                    <div class="mb-3">
-                        <label for="examDate" class="form-label text-white">Ամսաթիվ և ժամ</label>
-                        <input type="datetime-local" class="form-control bg-dark text-white border-secondary"
-                               id="examDate" required>
-                    </div>
-
-                    <!-- Duration -->
-                    <div class="mb-3">
-                        <label for="examDuration" class="form-label text-white">Տևողություն (րոպե)</label>
-                        <input type="number" class="form-control bg-dark text-white border-secondary"
-                               id="examDuration" min="10" value="40" required>
-                    </div>
-
-                    <!-- Submit Button -->
-                    <button type="submit" class="btn btn-primary w-100">Ստեղծել</button>
-                </form>
             </div>
         </div>
     </div>
