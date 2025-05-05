@@ -136,18 +136,68 @@
 <!-- Exam Creation Modal -->
 <div class="modal fade" id="examModal" tabindex="-1" aria-labelledby="examModalLabel" aria-hidden="true">
     <div class="modal-dialog">
-        <div class="modal-content">
+        <div class="modal-content bg-dark text-white">
             <div class="modal-header bg-info text-white">
                 <h5 class="modal-title" id="examModalLabel">Ստեղծել նոր քննություն</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form method="post" id="examForm" class="text-white" action="{% url 'create_exam' %}">
+                <form method="post" id="examForm" action="{% url 'create_exam' %}">
                     {% csrf_token %}
-                    {{ form.as_p }}
+
+                    <!-- Subject Field -->
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.subject.label }}</label>
+                        {{ form.subject }}
+                        {% if form.subject.errors %}
+                            <div class="text-danger">{{ form.subject.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Group Field -->
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.group.label }}</label>
+                        {{ form.group }}
+                        {% if form.group.errors %}
+                            <div class="text-danger">{{ form.group.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Due Date Field -->
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.due_date.label }}</label>
+                        {{ form.due_date }}
+                        {% if form.due_date.errors %}
+                            <div class="text-danger">{{ form.due_date.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Time Limit Field -->
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.time_limit.label }}</label>
+                        {{ form.time_limit }}
+                        {% if form.time_limit.errors %}
+                            <div class="text-danger">{{ form.time_limit.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Questions Field -->
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.questions.label }}</label>
+                        <div class="question-checkboxes">
+                            {% for checkbox in form.questions %}
+                                <div class="form-check">
+                                    {{ checkbox }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% if form.questions.errors %}
+                            <div class="text-danger">{{ form.questions.errors }}</div>
+                        {% endif %}
+                    </div>
+
                     <button type="submit" class="btn btn-primary w-100">Ստեղծել</button>
                 </form>
-
             </div>
         </div>
     </div>
