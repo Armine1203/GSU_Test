@@ -5,15 +5,14 @@ from django.db.models import Prefetch, Avg, Count, F, Sum, Exists, OuterRef, Whe
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.views import View
-from django.views.decorators.http import require_POST
-
-from .forms import SubjectForm
-from .models import TestQuestion, Mark, Lecturer, Student, MidtermExam, Subject, Group, StudentAnswer
+from .forms import SubjectForm, MidtermExamForm
+from .models import TestQuestion, Lecturer, Subject, Group, StudentAnswer,ExamResult, Mark, MidtermExam
 from django.contrib import messages
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-from django.http import JsonResponse, HttpResponseForbidden
+from django.http import JsonResponse, HttpResponseForbidden, HttpResponseNotAllowed
+from django.shortcuts import render, get_object_or_404
 
 
 # Create your views here.
@@ -249,7 +248,7 @@ class Leaderboard(View):
         context = {
             'leaderboard': leaderboard_data,
         }
-        return render(request, 'leaderboard.html', context)
+        return render(request, 'quiz/leaderboard.html', context)
 # In quiz/views.py
 
 @method_decorator(login_required, name="dispatch")
@@ -291,21 +290,36 @@ class StudentDashboard(View):
 class LecturerDashboard(View):
     def get(self, request):
         if not hasattr(request.user, 'lecturer'):
-            messages.error(request, "Միայն դասախոսները թույլտվություն ունեն այս էջ մուտք գործելու")
-            return redirect("index")
+            return HttpResponseForbidden("Only lecturers can access this page")
 
         lecturer = request.user.lecturer
-        subjects = Subject.objects.filter(lecturers=request.user)
+        now = timezone.now()
 
-        # Calculate statistics
+        # Get lecturer's subjects and questions
+        subjects = Subject.objects.filter(lecturers=request.user)
         total_questions = TestQuestion.objects.filter(subject__in=subjects).count()
+
+        # Get exams created by this lecturer with annotations
+        created_exams = MidtermExam.objects.filter(
+            created_by=request.user
+        ).annotate(
+            question_count=Count('questions'),
+            is_active=Case(
+                When(due_date__gt=now, then=True),
+                default=False,
+                output_field=BooleanField()
+            )
+        ).select_related('subject', 'group').order_by('-due_date')
+
+        form = MidtermExamForm(user=request.user)
 
         return render(request, "quiz/lecturer_dashboard.html", {
             'lecturer': lecturer,
             'subjects': subjects,
             'total_questions': total_questions,
-            'verified_questions': total_questions,
-            'pending_questions': 0,
+            'created_exams': created_exams,
+            'now': now,
+            'form': form,
         })
 
 
@@ -483,71 +497,64 @@ def get_groups_for_subject(request):
         return JsonResponse({'groups': []}, status=404)
 
 
-@require_POST
+@login_required
 def create_exam(request):
-    if not request.user.is_authenticated or not hasattr(request.user, 'lecturer'):
-        return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=401)
+    if request.method == 'POST':
+        form = MidtermExamForm(request.POST, user=request.user)  # Pass user to form
+        if form.is_valid():
+            exam = form.save(commit=False)
+            exam.created_by = request.user
+            exam.save()
+            form.save_m2m()
 
-    try:
-        data = json.loads(request.body)
-        subject = Subject.objects.get(id=data['subject'])
-        group = Group.objects.get(id=data['group'])
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Exam created successfully',
+                    'exam_id': exam.id
+                })
+            return redirect('lecturer_dashboard')
 
-        # Verify the lecturer teaches this subject
-        if subject not in request.user.lecturer.subjects.all():
-            return JsonResponse({'success': False, 'error': 'You do not teach this subject'}, status=403)
+        # Handle form errors
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': False,
+                'errors': form.errors
+            }, status=400)
+        messages.error(request, "Please correct the errors below")
+    else:
+        form = MidtermExamForm(user=request.user)
 
-        # Verify the group belongs to the subject's major
-        if group.major != subject.major:
-            return JsonResponse({'success': False, 'error': 'Invalid group for this subject'}, status=400)
+    return render(request, 'quiz/exam_form.html', {'form': form})
 
-        # Parse the datetime string
-        from django.utils.dateparse import parse_datetime
-        due_date = parse_datetime(data['due_date'])
-        if not due_date:
-            return JsonResponse({'success': False, 'error': 'Invalid date format'}, status=400)
-
-        # Create the exam
-        exam = MidtermExam.objects.create(
-            subject=subject,
-            group=group,
-            due_date=due_date,
-            time_limit=data['time_limit'],
-            created_by=request.user
-        )
-
-        return JsonResponse({
-            'success': True,
-            'exam_id': exam.id,
-            'message': 'Exam created successfully'
-        })
-
-    except Subject.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Subject not found'}, status=404)
-    except Group.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Group not found'}, status=404)
-    except KeyError as e:
-        return JsonResponse({'success': False, 'error': f'Missing field: {str(e)}'}, status=400)
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=400)
-
-
-# views.py
-from django.shortcuts import render, get_object_or_404
-from .models import ExamResult, Mark, MidtermExam
 
 @login_required
 def results(request):
     if not hasattr(request.user, 'student'):
         return HttpResponseForbidden("You don't have permission to view this page")
+
+    exam_id = request.GET.get('exam_id')
+
+    if exam_id:
+        # Show specific exam results
+        try:
+            exam = MidtermExam.objects.get(id=exam_id)
+            result = ExamResult.objects.get(exam=exam, student=request.user.student)
+            return redirect('result_detail', result_id=result.id)
+        except (MidtermExam.DoesNotExist, ExamResult.DoesNotExist):
+            messages.error(request, "Results not found for this exam")
+            return redirect('student_dashboard')
+
+    # Show all results
     student = request.user.student
     marks = Mark.objects.filter(user=request.user).select_related('exam')
     exam_results = ExamResult.objects.filter(student=student).select_related('exam')
 
     # Calculate statistics
     total_tests = marks.count()
-    avg_percentage = marks.aggregate(avg=models.Avg('got', output_field=models.FloatField()) * 100 / models.F('total'))[
-        'avg']
+    avg_percentage = marks.aggregate(
+        avg=models.Avg('got', output_field=models.FloatField()) * 100 / models.F('total')
+    )['avg']
     best_score = marks.order_by('-got').first()
 
     context = {
@@ -561,42 +568,55 @@ def results(request):
 
 @login_required
 def result_detail(request, result_id):
-    result = get_object_or_404(ExamResult, id=result_id)
-    answers = result.answers.all()
+    # Get the result with all related data
+    result = get_object_or_404(
+        ExamResult.objects.select_related('exam', 'student')
+                         .prefetch_related('answers__question'),
+        id=result_id,
+        student__user=request.user
+    )
 
-    try:
-        exam_result = ExamResult.objects.get(
-            exam=result.exam,
-            student=request.user.student
-        )
+    # Calculate actual points earned (sum of scores for correct answers)
+    points_earned = sum(
+        answer.question.score
+        for answer in result.answers.all()
+        if answer.is_correct
+    )
 
-        questions = []
-        for answer in exam_result.answers.all().select_related('question'):
-            questions.append({
-                'question': answer.question,
-                'student_answer': answer.answer,
-                'correct_answer': answer.question.correct_option,
-                'is_correct': answer.is_correct,
-                'options': {
-                    'A': answer.question.option1,
-                    'B': answer.question.option2,
-                    'C': answer.question.option3,
-                    'D': answer.question.option4,
-                }
-            })
+    # Calculate total possible points
+    total_possible_points = sum(
+        answer.question.score
+        for answer in result.answers.all()
+    )
 
-        context = {
-            'result': result,
-            'exam': result.exam,
-            'questions': questions,
-            'percentage': exam_result.percentage,
-            'exam_result': exam_result,
-        }
-        return render(request, "quiz/result_detail.html", context)
-    # {'result': result, 'answers': answers}
-    except ExamResult.DoesNotExist:
-        messages.error(request, "Detailed results not available")
-        return redirect('results')
+    # Prepare questions data
+    questions = []
+    for answer in result.answers.all():
+        questions.append({
+            'question': answer.question,
+            'student_answer': answer.answer,
+            'correct_answer': answer.question.correct_option,
+            'is_correct': answer.is_correct,
+            'score': answer.question.score,
+            'options': {
+                'A': answer.question.option1,
+                'B': answer.question.option2,
+                'C': answer.question.option3,
+                'D': answer.question.option4,
+            }
+        })
+
+    context = {
+        'result': result,
+        'exam': result.exam,
+        'questions': questions,
+        'correct_answers_count': result.score,  # Number of correct answers
+        'total_questions': result.total_questions,  # Total number of questions
+        'points_earned': points_earned,  # Total points earned
+        'total_possible_points': total_possible_points,  # Max possible points
+        'percentage': round((points_earned / total_possible_points) * 100, 2) if total_possible_points > 0 else 0,
+    }
+    return render(request, "quiz/result_detail.html", context)
 
 
 # views.py - Example of how to save exam results
@@ -643,3 +663,7 @@ def submit_exam(request, exam_id):
         )
 
         return redirect('results')
+
+def exam_detail_view(request, exam_id):
+    exam = get_object_or_404(MidtermExam, id=exam_id)
+    return render(request, 'exams/exam_detail.html', {'exam': exam})

@@ -86,8 +86,11 @@ class MidtermExam(models.Model):
     questions = models.ManyToManyField(TestQuestion)
     due_date = models.DateTimeField()
     time_limit = models.IntegerField(default=40)  # in minutes
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE,default=1)
-
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='created_exams'
+    )
     def __str__(self):
         return f"{self.subject} - {self.group} (Due: {self.due_date})"
 

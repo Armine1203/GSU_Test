@@ -1,4 +1,5 @@
 {% extends 'layout.html' %}
+{% load custom_filters %}
 
 {% block title %}Exam Results{% endblock %}
 
@@ -6,26 +7,39 @@
 <div class="container mt-5">
     <div class="card">
         <div class="card-header bg-primary text-white">
-            <h3>{{ exam.subject.name }} Results</h3>
+            <h3>{{ exam.subject.name }} Արդյունքներ</h3>
         </div>
         <div class="card-body">
-            <div class="row mb-4">
-                <div class="col-md-4">
-                    <p><strong>Score:</strong> {{ result.got }}/{{ result.total }}</p>
-                </div>
-                <div class="col-md-4">
-                    <p><strong>Percentage:</strong> {{ percentage }}%</p>
-                </div>
-                <div class="col-md-4">
-                    <p><strong>Date:</strong> {{ result.created_at|date:"Y-m-d H:i" }}</p>
-                </div>
-            </div>
+<div class="row mb-4">
+    <div class="col-md-4">
+        <p><strong>Ճիշտ պատասխաններ:</strong>
+           {{ correct_answers_count }} / {{ total_questions }}
+        </p>
 
-            <h4 class="mb-3">Question Breakdown</h4>
+    </div>
+    <div class="col-md-4">
+         <p><strong>Միավոր:</strong>
+           {{ points_earned }} / {{ total_possible_points }}
+        </p>
+
+    </div>
+    <div class="col-md-4">
+        <p><strong>Հանձնման ամսաթիվ:</strong>
+           {{ result.completed_at|date:"Y-m-d H:i" }}
+        </p>
+
+    </div>
+</div>
+            <h4 class="mb-3">Հարցեր</h4>
             {% for question in questions %}
             <div class="card mb-3 {% if question.is_correct %}border-success{% else %}border-danger{% endif %}">
                 <div class="card-header {% if question.is_correct %}bg-success text-white{% else %}bg-danger text-white{% endif %}">
-                    Question {{ forloop.counter }}
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>Հարց {{ forloop.counter }}</span>
+                        <span class="badge bg-light {% if question.is_correct %}text-success{% else %}text-danger{% endif %}">
+                            {{ question.question.score }} միավոր
+                        </span>
+                    </div>
                 </div>
                 <div class="card-body">
                     <h5 class="card-title">{{ question.question.question }}</h5>
@@ -46,7 +60,7 @@
 
                     {% if not question.is_correct %}
                     <div class="alert alert-info mt-3">
-                        <strong>Correct Answer:</strong> {{ question.correct_answer }}.
+                        <strong>Ճիշտ պատասխան</strong> {{ question.correct_answer }}.
                         {{ question.options|get_item:question.correct_answer }}
                     </div>
                     {% endif %}
@@ -54,12 +68,14 @@
             </div>
             {% endfor %}
 
-            <a href="{% url 'results' %}" class="btn btn-secondary mt-3">
-                Back to All Results
-            </a>
-            <a href="{% url 'student_dashboard' %}" class="btn btn-primary mt-3">
-                Back to Dashboard
-            </a>
+            <div class="d-flex justify-content-between mt-4">
+                <a href="{% url 'results' %}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left me-1"></i> Քննությունների արդյունքներ
+                </a>
+                <a href="{% url 'student_dashboard' %}" class="btn btn-primary">
+                    <i class="bi bi-house-door me-1"></i> Իմ էջը
+                </a>
+            </div>
         </div>
     </div>
 </div>

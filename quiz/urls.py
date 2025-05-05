@@ -27,9 +27,11 @@ urlpatterns = [
     path('create-exam/', views.create_exam, name='create_exam'),
     path('select_question_count/', views.SelectQuestionCount.as_view(), name='select_question_count'),
     path('add_subject/', AddSubject.as_view(), name='add_subject'),
+    path('exam/<int:exam_id>/', views.exam_detail_view, name='exam_detail'),
 
     # Results URLs (new implementation)
     path('quiz/', Quiz.as_view(), name='quiz'),
     path('results/', results, name='results'),  # List of all results
     path('results/<int:result_id>/', views.result_detail, name='result_detail'),  # Detailed view of a specific result
+
 ]

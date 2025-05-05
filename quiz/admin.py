@@ -81,6 +81,21 @@ class MidtermExamAdmin(admin.ModelAdmin):
     questions_count.short_description = 'Questions'
 
 
+class ExamResultAdmin(admin.ModelAdmin):
+    list_display = ('student', 'exam', 'score', 'percentage_display', 'completed_at')
+    list_filter = ('exam__subject', 'exam__group', 'completed_at')
+    search_fields = ('student__user__username', 'student__name', 'student__last_name')
+    readonly_fields = ('percentage_display',)
+    date_hierarchy = 'completed_at'
+    raw_id_fields = ('student', 'exam')
+
+    def percentage_display(self, obj):
+        return f"{obj.percentage}%"
+
+    percentage_display.short_description = 'Score %'
+
+
+
 #admin.site.register(User, CustomUserAdmin)
 admin.site.register(Faculty, FacultyAdmin)
 admin.site.register(Department, DepartmentAdmin)
@@ -91,3 +106,4 @@ admin.site.register(Lecturer, LecturerAdmin)
 admin.site.register(Subject, SubjectAdmin)
 admin.site.register(TestQuestion, TestQuestionAdmin)
 admin.site.register(MidtermExam, MidtermExamAdmin)
+admin.site.register(ExamResult, ExamResultAdmin)

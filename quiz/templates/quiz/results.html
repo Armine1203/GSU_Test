@@ -4,7 +4,7 @@
 
 {% block body %}
 <div class="container mt-5">
-    <h1 class="mb-4">My Exam Results</h1>
+    <h1 class="mb-4">Միջանկյալ քննությունների արդյունքներ</h1>
     
     {% if results %}
     <div class="table-responsive">
@@ -12,11 +12,11 @@
             <thead class="table-dark">
                 <tr>
                     <th>#</th>
-                    <th>Subject</th>
-                    <th>Score</th>
-                    <th>Percentage</th>
-                    <th>Date Taken</th>
-                    <th>Details</th>
+                    <th>Առարկա</th>
+                    <th>Միավոր</th>
+                    <th>Տոկոսայնություն</th>
+                    <th>Օր-ժամ</th>
+                    <th>Մանրամասներ</th>
                 </tr>
             </thead>
             <tbody>
@@ -30,7 +30,7 @@
                     <td>
                         <a href="{% url 'result_detail' result.id %}"
                            class="btn btn-sm btn-primary">
-                            View
+                            Տեսնել
                         </a>
                     </td>
                 </tr>
@@ -41,10 +41,10 @@
     
     <div class="card mt-4">
         <div class="card-body">
-            <h5 class="card-title">Statistics</h5>
-            <p>Total Tests: {{ total_tests }}</p>
-            <p>Average Score: {{ avg_percentage|floatformat:2 }}%</p>
-            <p>Best Score: {{ best_score.got }}/{{ best_score.total }}</p>
+            <h5 class="card-title">Վիճակագրություն</h5>
+            <p>Թեստերի քանակ {{ total_tests }}</p>
+            <p>Միջին արդյունք {{ avg_percentage|floatformat:2 }}%</p>
+            <p>Լավագույն արդյունք {{ best_score.got }}/{{ best_score.total }}</p>
         </div>
     </div>
     {% else %}
