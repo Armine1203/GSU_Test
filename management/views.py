@@ -20,21 +20,12 @@ class Manage(View):
                 "link": reverse("upload_question"),
                 "btntxt": "Բեռնել"
             },
-            "Ստանալ արդյունքները": {
-                "link": reverse("results"),
-                "btntxt": "Ստանալ"
-            }
         }
         return render(
             request,
             "management/manage.html",
             {"panel_options": panel_options}
         )
-
-# @method_decorator(staff_member_required, name="dispatch")
-# class Results(View):
-#     def get(self, request):
-#         return render(request, "quiz/results.html", {"results": Mark.objects.all()})
 
 class UploadQuestion(View):
     def get(self, request):
@@ -76,16 +67,27 @@ class UploadQuestion(View):
                     messages.error(request, "You don't teach this subject")
                     return redirect("upload_question")
 
-            # Process CSV
-            decoded_file = q_file.read().decode('utf-8').splitlines()
+            # Process CSV with proper encoding handling
+            try:
+                # First try UTF-8
+                decoded_file = q_file.read().decode('utf-8-sig').splitlines()
+            except UnicodeDecodeError:
+                # Fallback to other encodings if needed
+                try:
+                    decoded_file = q_file.read().decode('utf-16').splitlines()
+                except UnicodeDecodeError:
+                    messages.error(request, "Unsupported file encoding. Please use UTF-8 or UTF-16.")
+                    return redirect("upload_question")
+
             reader = csv.DictReader(decoded_file)
 
             created_count = 0
             error_rows = []
 
-            for i, row in enumerate(reader, start=2):  # start=2 for 1-based row numbering
+            for i, row in enumerate(reader, start=2):
                 try:
-                    TestQuestion.objects.create(
+                    # Ensure all text fields are properly encoded
+                    question = TestQuestion(
                         subject=subject,
                         question=row['question'],
                         option1=row['option1'],
@@ -96,6 +98,7 @@ class UploadQuestion(View):
                         score=int(row.get('score', 1)),
                         creator=request.user
                     )
+                    question.save()
                     created_count += 1
                 except Exception as e:
                     error_rows.append(f"Row {i}: {str(e)}")
@@ -105,7 +108,7 @@ class UploadQuestion(View):
                 messages.success(request, f"Successfully uploaded {created_count} questions")
             if error_rows:
                 messages.warning(request, f"Errors in {len(error_rows)} rows")
-                for error in error_rows[:3]:  # Show first 3 errors
+                for error in error_rows[:3]:
                     messages.info(request, error)
 
         except Subject.DoesNotExist:

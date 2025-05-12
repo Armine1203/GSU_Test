@@ -9,11 +9,14 @@ https://docs.djangoproject.com/en/4.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
+import locale
 from os import environ
-
 from pathlib import Path
+from django.utils.translation import gettext_lazy as _
+from django.utils.encoding import force_str
+locale.getpreferredencoding = lambda: "UTF-8"
+force_str('test',encoding='UTF-8')
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -51,7 +54,11 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
+
 ]
+
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 10240  # higher value if needed
 
 ROOT_URLCONF = 'quizapp.urls'
 
@@ -74,13 +81,28 @@ TEMPLATES = [
 WSGI_APPLICATION = 'quizapp.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+# Internationalization
+LANGUAGE_CODE = 'hy-am'  # Changed from 'en-us' to Armenian
+TIME_ZONE = 'Asia/Yerevan'
+USE_I18N = True
+USE_L10N = True
+USE_TZ = True
+
+# Encoding settings
+DEFAULT_CHARSET = 'utf-8'
+FILE_CHARSET = 'utf-8'
+
+# Database configuration for SQLite (add these options)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+        'OPTIONS': {
+            'timeout': 20,
+            # SQLite specific encoding options
+            'isolation_level': None,
+        }
     }
 }
 #AUTH_USER_MODEL = 'quiz.CustomUser'
@@ -108,13 +130,6 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'Asia/Yerevan'
-
-USE_I18N = True
-
-USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)
@@ -137,4 +152,5 @@ GLOBAL_SETTINGS = {
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+DEFAULT_CHARSET = 'utf-8'
 

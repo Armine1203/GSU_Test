@@ -13,7 +13,11 @@ from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponseForbidden, HttpResponseNotAllowed
 from django.shortcuts import render, get_object_or_404
-
+from django.http import HttpResponse
+from django.views.generic import View
+from docx import Document
+from openpyxl import Workbook
+from io import BytesIO
 
 # Create your views here.
 @method_decorator(login_required, name="dispatch")
@@ -233,23 +237,23 @@ class Leaderboard(View):
     def get(self, request):
         try:
             if hasattr(request.user, 'student'):
-                # Student view (same as before)
-                student = request.user.student
-                current_group = student.group
-                group_exams = MidtermExam.objects.filter(
-                    group=current_group
-                ).select_related('subject').order_by('-due_date')
+                    # Student view (same as before)
+                    student = request.user.student
+                    current_group = student.group
+                    group_exams = MidtermExam.objects.filter(
+                        group=current_group
+                    ).select_related('subject').order_by('-due_date')
 
-                exam_results = ExamResult.objects.filter(
-                    exam__group=current_group
-                ).select_related('student', 'exam')
+                    exam_results = ExamResult.objects.filter(
+                        exam__group=current_group
+                    ).select_related('student', 'exam')
 
-                context = {
-                    'user_type': 'student',
-                    'current_group': current_group,
-                    'group_exams': group_exams,
-                    'exam_results': exam_results,
-                }
+                    context = {
+                        'user_type': 'student',
+                        'current_group': current_group,
+                        'group_exams': group_exams,
+                        'exam_results': exam_results,
+                    }
 
             elif hasattr(request.user, 'lecturer'):
                 # Lecturer view
@@ -260,6 +264,7 @@ class Leaderboard(View):
                 ).distinct()
 
                 selected_group_id = request.GET.get('group')
+                export_format = request.GET.get('export')
                 selected_group = None
                 group_exams = MidtermExam.objects.none()
                 exam_results = ExamResult.objects.none()
@@ -275,6 +280,10 @@ class Leaderboard(View):
                         exam__in=group_exams
                     ).select_related('student', 'exam')
 
+                    # Handle export request
+                    if export_format in ['word', 'excel']:
+                        return self.export_results(selected_group, group_exams, exam_results, export_format)
+
                 context = {
                     'user_type': 'lecturer',
                     'subjects': subjects,
@@ -289,7 +298,6 @@ class Leaderboard(View):
                     'error': "Invalid user type"
                 })
 
-            # Common context for both user types
             if not group_exams.exists():
                 context['no_exams'] = True
 
@@ -299,6 +307,49 @@ class Leaderboard(View):
             return render(request, 'quiz/leaderboard.html', {
                 'error': "Profile not found"
             })
+
+    def export_results(self, group, exams, results, format):
+        if format == 'word':
+            return self.export_to_word(group, exams, results)
+        elif format == 'excel':
+            return self.export_to_excel(group, exams, results)
+
+    def export_to_word(self, group, exams, results):
+        document = Document()
+
+        # Add title
+        document.add_heading(f'Միջանկյալ քննության արդյունքեր - խումբ {group.name} ', level=1)
+
+        for exam in exams:
+            # Add exam section
+            document.add_heading(f'Առարկա - {exam.subject.name}', level=2)
+            document.add_paragraph(f'Օր - {exam.due_date.strftime("%d.%m.%Y")}')
+
+            # Create table
+            table = document.add_table(rows=1, cols=3)
+            table.style = 'Table Grid'
+
+            # Add headers
+            hdr_cells = table.rows[0].cells
+            hdr_cells[0].text = '#'
+            hdr_cells[1].text = 'Ուսանող'
+            hdr_cells[2].text = 'Միավոր'
+
+            # Add data rows
+            exam_results = [r for r in results if r.exam.id == exam.id]
+            for idx, result in enumerate(exam_results, start=1):
+                row_cells = table.add_row().cells
+                row_cells[0].text = str(idx)
+                row_cells[1].text = f"{result.student.name} {result.student.last_name}"
+                row_cells[2].text = str(result.score)
+
+        # Prepare response
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+        response['Content-Disposition'] = f'attachment; filename="{group.name}_քննության_արդյունքներ.docx"'
+        document.save(response)
+
+        return response
+
 
 @method_decorator(login_required, name="dispatch")
 class StudentDashboard(View):
@@ -371,7 +422,6 @@ class LecturerDashboard(View):
             'form': form,
         })
 
-
 # Add to views.py
 @method_decorator(login_required, name="dispatch")
 class ViewQuestions(View):
@@ -398,8 +448,6 @@ class ViewQuestions(View):
         except Subject.DoesNotExist:
             messages.error(request, "Առարկան չի գտնվել")
             return redirect("lecturer_dashboard")
-
-
 
 @method_decorator(login_required, name="dispatch")
 class DeleteQuestion(View):

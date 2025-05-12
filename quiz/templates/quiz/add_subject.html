@@ -3,64 +3,84 @@
 {% block title %}Ավելացնել առարկա{% endblock %}
 
 {% block body %}
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h4>Ավելացնել նոր առարկա</h4>
+<div class="container mt-5 mb-5" style="background-color: #f8f9fa; padding: 20px; border-radius: 10px;">
+    <div class="card" style="background-color: white; border: 1px solid #dee2e6;">
+        <div class="card-header" style="background-color: #e9ecef; border-bottom: 1px solid #dee2e6;">
+            <h4 class="mb-0 text-dark">Ավելացնել նոր առարկա</h4>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="mb-4">
+                    <label class="form-label text-dark">Անվանում</label>
+                    <input type="text" class="form-control form-control-lg" name="{{ form.name.name }}"
+                           value="{{ form.name.value|default_if_none:'' }}"
+                           style="background-color: white; border: 1px solid #dee2e6; color: #212529;">
+                    {% if form.name.errors %}
+                    <div class="text-danger mt-2">{{ form.name.errors.0 }}</div>
+                    {% endif %}
                 </div>
-                <div class="card-body">
-                    <form method="post">
-                        {% csrf_token %}
 
-                        <div class="mb-3">
-                            <label class="form-label">Անվանում</label>
-                            {{ form.name }}
-                            {% if form.name.errors %}
-                            <div class="text-danger">{{ form.name.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Մասնագիտություն</label>
-                            {{ form.major }}
-                            {% if form.major.errors %}
-                            <div class="text-danger">{{ form.major.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Կուրս(1, 2, ․․․, 5)</label>
-                            {{ form.course }}
-                            {% if form.course.errors %}
-                            <div class="text-danger">{{ form.course.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Տարի(2025)</label>
-                            {{ form.year }}
-                            {% if form.year.errors %}
-                            <div class="text-danger">{{ form.year.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Կիսամյակ</label>
-                            {{ form.semester }}
-                            {% if form.semester.errors %}
-                            <div class="text-danger">{{ form.semester.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary">Պահպանել</button>
-                            <a href="{% url 'lecturer_dashboard' %}" class="btn btn-secondary">Չեղարկել</a>
-                        </div>
-                    </form>
+                <div class="mb-4">
+                    <label class="form-label text-dark">Մասնագիտություն</label>
+                    <select class="form-select form-select-lg" name="{{ form.major.name }}"
+                            style="background-color: white; border: 1px solid #dee2e6; color: #212529;">
+                        {% for value, label in form.major.field.choices %}
+                            <option value="{{ value }}" {% if form.major.value == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    {% if form.major.errors %}
+                    <div class="text-danger mt-2">{{ form.major.errors.0 }}</div>
+                    {% endif %}
                 </div>
-            </div>
+
+                <div class="mb-4">
+                    <label class="form-label text-dark">Կուրս(1, 2, ․․․, 5)</label>
+                    <input type="number" class="form-control form-control-lg" name="{{ form.course.name }}"
+                           value="{{ form.course.value|default_if_none:'' }}"
+                           style="background-color: white; border: 1px solid #dee2e6; color: #212529;">
+                    {% if form.course.errors %}
+                    <div class="text-danger mt-2">{{ form.course.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label text-dark">Տարի(2025)</label>
+                    <input type="number" class="form-control form-control-lg" name="{{ form.year.name }}"
+                           value="{{ form.year.value|default_if_none:'' }}"
+                           style="background-color: white; border: 1px solid #dee2e6; color: #212529;">
+                    {% if form.year.errors %}
+                    <div class="text-danger mt-2">{{ form.year.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label text-dark">Կիսամյակ</label>
+                    <select class="form-select form-select-lg" name="{{ form.semester.name }}"
+                            style="background-color: white; border: 1px solid #dee2e6; color: #212529;">
+                        {% for value, label in form.semester.field.choices %}
+                            <option value="{{ value }}" {% if form.semester.value == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    {% if form.semester.errors %}
+                    <div class="text-danger mt-2">{{ form.semester.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{% url 'lecturer_dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Չեղարկել
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="bi bi-save"></i> Պահպանել
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

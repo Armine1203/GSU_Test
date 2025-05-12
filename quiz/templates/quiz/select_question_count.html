@@ -3,19 +3,22 @@
 {% block title %}Select Question Count{% endblock %}
 
 {% block body %}
-<div class="container mt-5 mb-5">
+<div class="container mt-5 mb-5" style="background-color: #f8f9fa; padding: 20px; border-radius: 10px;">
   <form method="post" action="{% url 'select_question_count' %}">
     {% csrf_token %}
-    <h1 class="text-center mb-4">
-      Ավելացնել նոր հարցեր
-    </h1>
 
-    <div class="card shadow">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="mb-0 text-dark">
+        Ավելացնել նոր հարցեր
+      </h1>
+    </div>
+
+    <div class="card mb-4" style="background-color: white; border: 1px solid #dee2e6;">
       <div class="card-body">
         <!-- Subject selection -->
         <div class="mb-4">
-          <label for="subjectSelect" class="form-label fs-5">Ընտրել առարկան</label>
-          <select class="form-select form-select-lg" id="subjectSelect" name="subject" required>
+          <label for="subjectSelect" class="form-label text-dark">Ընտրել առարկան</label>
+          <select class="form-select" id="subjectSelect" name="subject" required style="background-color: white; border: 1px solid #dee2e6; color: #212529;">
             <option selected disabled value="">Ընտրեք առարկան</option>
             {% for subject in subjects %}
               <option value="{{ subject.id }}">{{ subject.name }} ({{ subject.major.name }})</option>
@@ -25,10 +28,10 @@
 
         <!-- Question count input -->
         <div class="mb-4">
-          <label for="questionCount" class="form-label fs-5">Հարցերի քանակ</label>
-          <input type="number" class="form-control form-control-lg" id="questionCount" 
-                name="question_count" min="1" max="50" value="10" required>
-          <div class="form-text">Մուտքագրեք 1-50 միջակայքում գտնվող թիվ</div>
+          <label for="questionCount" class="form-label text-dark">Հարցերի քանակ</label>
+          <input type="number" class="form-control" id="questionCount"
+                name="question_count" min="1" max="50" value="10" required style="background-color: white; border: 1px solid #dee2e6; color: #212529;">
+          <div class="form-text  text-dark">Մուտքագրեք 1-50 միջակայքում գտնվող թիվ</div>
         </div>
 
         <button type="submit" class="btn btn-primary btn-lg w-100 mt-3">

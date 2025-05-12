@@ -7,7 +7,7 @@
     {% if user_type == 'lecturer' %}
     <!-- Lecturer View -->
     <div class="row mb-4">
-        <h1 class="text-center">Դասախոսի վահանակ</h1>
+        <h1 class="text-center">Քննությունների արդյունքներ</h1>
         <div class="col-md-6 offset-md-3">
             <form method="get" class="card">
                 <div class="card-header bg-info text-white">
@@ -18,7 +18,7 @@
                         <option value="">-- Ընտրել խումբ --</option>
                         {% for group in groups %}
                         <option value="{{ group.id }}"
-                            {% if selected_group and selected_group.id == group.id %}selected{% endif %}>
+                                {% if selected_group and selected_group.id == group.id %}selected{% endif %}>
                             {{ group.name }} ({{ group.major.name }})
                         </option>
                         {% endfor %}
@@ -27,7 +27,19 @@
             </form>
         </div>
     </div>
+
+    {% if selected_group and group_exams %}
+    <div class="row mb-3">
+        <div class="col-md-6 offset-md-3 text-center">
+            <div class="btn-group">
+                <a href="?group={{ selected_group.id }}&export=word" class="btn btn-success">
+                    <i class="fas fa-file-word"></i> Ներբեռնել արդյունքների Word ֆայլը
+                </a>
+            </div>
+        </div>
+    </div>
     {% endif %}
+    {% endif %} {# This closes the user_type == 'lecturer' check #}
 
     {% if error %}
     <div class="alert alert-danger text-center mt-4">
@@ -62,48 +74,48 @@
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Ուսանող</th>
-                                <th>ID</th>
-                                <th>Միավոր</th>
-                                <th>Տոկոս</th>
-                            </tr>
+                        <tr>
+                            <th>#</th>
+                            <th>Ուսանող</th>
+                            <th>ID</th>
+                            <th>Միավոր</th>
+                            <th>Տոկոս</th>
+                        </tr>
                         </thead>
                         <tbody>
-                            {% for result in exam_results %}
-                            {% if result.exam.id == exam.id %}
-                            <tr {% if user_type == 'student' and result.student.user == request.user %}class="table-active"{% endif %}>
-                                <td>{{ forloop.counter }}</td>
-                                <td>
-                                    {{ result.student.name }} {{ result.student.last_name }}
-                                    {% if user_type == 'student' and result.student.user == request.user %}
-                                    <span class="badge bg-info">Դուք</span>
-                                    {% endif %}
-                                </td>
-                                <td>{{ result.student.id_number }}</td>
-                                <td>{{ result.score }}</td>
-                                <td>
-                                    <div class="progress" style="height: 25px;">
-                                        <div class="progress-bar
-                                            {% if result.percentage >= 80 %}bg-success
-                                            {% elif result.percentage >= 50 %}bg-warning
-                                            {% else %}bg-danger
-                                            {% endif %}"
-                                            style="width: {{ result.percentage }}%">
-                                            {{ result.percentage|floatformat:1 }}%
-                                        </div>
+                        {% for result in exam_results %}
+                        {% if result.exam.id == exam.id %}
+                        <tr {% if user_type == 'student' and result.student.user == request.user %}class="table-active"{% endif %}>
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                {{ result.student.name }} {{ result.student.last_name }}
+                                {% if user_type == 'student' and result.student.user == request.user %}
+                                <span class="badge bg-info">Դուք</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ result.student.id_number }}</td>
+                            <td>{{ result.score }}</td>
+                            <td>
+                                <div class="progress" style="height: 25px;">
+                                    <div class="progress-bar
+                                                {% if result.percentage >= 80 %}bg-success
+                                                {% elif result.percentage >= 50 %}bg-warning
+                                                {% else %}bg-danger
+                                                {% endif %}"
+                                         style="width: {{ result.percentage }}%">
+                                        {{ result.percentage|floatformat:1 }}%
                                     </div>
-                                </td>
-                            </tr>
-                            {% endif %}
-                            {% empty %}
-                            <tr>
-                                <td colspan="{% if user_type == 'lecturer' %}6{% else %}5{% endif %}" class="text-center">
-                                    Այս քննության համար արդյունքներ չկան
-                                </td>
-                            </tr>
-                            {% endfor %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% empty %}
+                        <tr>
+                            <td colspan="{% if user_type == 'lecturer' %}6{% else %}5{% endif %}" class="text-center">
+                                Այս քննության համար արդյունքներ չկան
+                            </td>
+                        </tr>
+                        {% endfor %}
                         </tbody>
                     </table>
                 </div>
