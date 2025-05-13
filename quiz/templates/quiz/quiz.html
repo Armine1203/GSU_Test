@@ -10,62 +10,55 @@
 
     <form method="post" action="{% url 'quiz' %}">
         {% csrf_token %}
-        <!--hidden exam id field-->
         <input type="hidden" name="exam_id" value="{{ exam.id }}">
 
-        <h1 class="text-center">
-            Թեստ
-        </h1>
-        {% for q in questions %}
-        <div class="card border-info">
-            <div class="card-header bg-info text-white">Հարց {{forloop.counter}}</div>
-            <div class="card-body">
-                <h5 class="user-select-none">
-                    {{ q.question }}
-                </h5>
+        <h1 class="text-center">Թեստ</h1>
 
-                <!-- image display  -->
-                {% if q.image %}
+        {% for question in questions %}
+        <div class="card border-info mb-4">
+            <div class="card-header bg-info text-white">
+                Հարց {{ forloop.counter }}
+            </div>
+            <div class="card-body">
+                <h5 class="user-select-none">{{ question.question }}</h5>
+
+                {% if question.image %}
                 <div class="mb-3 text-center">
-                    <img src="{{ q.image.url }}" alt="Question image" class="img-fluid rounded"
+                    <img src="{{ question.image.url }}" alt="Question image" class="img-fluid rounded"
                          style="max-height: 300px;">
                 </div>
                 {% endif %}
 
-                <input type="hidden" name="q{{forloop.counter}}" value="{{q.id}}">
+                <input type="hidden" name="q{{ forloop.counter }}" value="{{ question.id }}">
+
                 <div class="form-check">
-                    <input class="form-check-input" type="radio" name="q{{forloop.counter}}o"
-                           id="q{{forloop.counter}}o1" value="A">
-                    <label class="form-check-label" for="q{{forloop.counter}}o1">
-                        {{ q.option1 }}
+                    <input class="form-check-input" type="radio" name="q{{ question.id }}o" id="q{{ question.id }}o1" value="A" required>
+                    <label class="form-check-label" for="q{{ question.id }}o1">
+                        {{ question.option1 }}
                     </label>
                 </div>
                 <div class="form-check">
-                    <input class="form-check-input" type="radio" name="q{{forloop.counter}}o"
-                           id="q{{forloop.counter}}o2" value="B">
-                    <label class="form-check-label" for="q{{forloop.counter}}o2">
-                        {{ q.option2 }}
+                    <input class="form-check-input" type="radio" name="q{{ question.id }}o" id="q{{ question.id }}o2" value="B">
+                    <label class="form-check-label" for="q{{ question.id }}o2">
+                        {{ question.option2 }}
                     </label>
                 </div>
                 <div class="form-check">
-                    <input class="form-check-input" type="radio" name="q{{forloop.counter}}o"
-                           id="q{{forloop.counter}}o3" value="C">
-                    <label class="form-check-label" for="q{{forloop.counter}}o3">
-                        {{ q.option3 }}
+                    <input class="form-check-input" type="radio" name="q{{ question.id }}o" id="q{{ question.id }}o3" value="C">
+                    <label class="form-check-label" for="q{{ question.id }}o3">
+                        {{ question.option3 }}
                     </label>
                 </div>
                 <div class="form-check">
-                    <input class="form-check-input" type="radio" name="q{{forloop.counter}}o"
-                           id="q{{forloop.counter}}o4" value="D">
-                    <label class="form-check-label" for="q{{forloop.counter}}o4">
-                        {{ q.option4 }}
+                    <input class="form-check-input" type="radio" name="q{{ question.id }}o" id="q{{ question.id }}o4" value="D">
+                    <label class="form-check-label" for="q{{ question.id }}o4">
+                        {{ question.option4 }}
                     </label>
                 </div>
             </div>
         </div>
-        <br>
         {% endfor %}
-        <br>
+
         <div class="mb-3 form-check">
             <input type="checkbox" class="form-check-input" id="exampleCheck1" required>
             <label class="form-check-label" for="exampleCheck1">
@@ -76,10 +69,9 @@
     </form>
 </div>
 
-<!--for timer-->
 <script>
-    const quizDuration = {{ time_limit|default:2400 }} * 1000;  // milliseconds
-    const startTime = new Date("{{ start_time }}");  // ISO format
+    const quizDuration = {{ time_limit|default:2400 }} * 1000;
+    const startTime = new Date("{{ start_time }}");
     const endTime = new Date(startTime.getTime() + quizDuration);
 
     const timerElement = document.getElementById("timer");
@@ -101,8 +93,7 @@
       }
     }
 
-    updateTimer();  // initial call
+    updateTimer();
     const timerInterval = setInterval(updateTimer, 1000);
 </script>
-
 {% endblock %}

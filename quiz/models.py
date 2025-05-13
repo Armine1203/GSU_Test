@@ -97,6 +97,21 @@ class MidtermExam(models.Model):
     def number_of_tests(self):
         return self.questions.count()
 
+    @property
+    def is_random(self):
+        """Check if this exam uses random questions"""
+        return not self.questions.exists() and self.examresult_set.exists()
+
+    def get_questions_for_student(self, student):
+        """Get questions for a specific student"""
+        if self.is_random:
+            try:
+                result = self.examresult_set.get(student=student)
+                return result.questions.all()
+            except ExamResult.DoesNotExist:
+                return TestQuestion.objects.none()
+        return self.questions.all()
+
 
 class Mark(models.Model):
     total = models.IntegerField()

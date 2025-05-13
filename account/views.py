@@ -28,7 +28,7 @@ class Login(View):
             # Redirect based on user type
             # Redirect based on user type
             if user.is_superuser or user.is_staff:
-                return redirect("manage")
+                return redirect("index")
             elif hasattr(user, 'user_type'):
                 if user.user_type == 2:  # Lecturer
                     return redirect("lecturer_dashboard")

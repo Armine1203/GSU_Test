@@ -1,4 +1,7 @@
 import json
+import random
+from django.db import transaction
+from .models import TestQuestion, MidtermExam, ExamResult, StudentAnswer, Mark
 
 from django.db import models
 from django.db.models import Prefetch, Avg, Count, F, Sum, Exists, OuterRef, When, Case, BooleanField
@@ -594,35 +597,6 @@ def get_groups_for_subject(request):
         return JsonResponse({'groups': []}, status=404)
 
 
-@login_required
-def create_exam(request):
-    if request.method == 'POST':
-        form = MidtermExamForm(request.POST, user=request.user)  # Pass user to form
-        if form.is_valid():
-            exam = form.save(commit=False)
-            exam.created_by = request.user
-            exam.save()
-            form.save_m2m()
-
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'success': True,
-                    'message': 'Exam created successfully',
-                    'exam_id': exam.id
-                })
-            return redirect('lecturer_dashboard')
-
-        # Handle form errors
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({
-                'success': False,
-                'errors': form.errors
-            }, status=400)
-        messages.error(request, "Please correct the errors below")
-    else:
-        form = MidtermExamForm(user=request.user)
-
-    return render(request, 'quiz/exam_form.html', {'form': form})
 
 
 @login_required
@@ -764,3 +738,121 @@ def submit_exam(request, exam_id):
 def exam_detail_view(request, exam_id):
     exam = get_object_or_404(MidtermExam, id=exam_id)
     return render(request, 'exams/exam_detail.html', {'exam': exam})
+
+
+@login_required
+def create_exam(request):
+    if request.method == 'POST':
+        form = MidtermExamForm(request.POST, user=request.user)
+        if form.is_valid():
+            exam = form.save(commit=False)
+            exam.created_by = request.user
+
+            use_random = form.cleaned_data.get('use_random', False)
+
+            if use_random:
+                try:
+                    questions_per_student = form.cleaned_data['questions_per_student']
+                    subject = form.cleaned_data['subject']
+
+                    # Get all questions for the subject
+                    all_questions = list(TestQuestion.objects.filter(subject=subject))
+
+                    if len(all_questions) < questions_per_student:
+                        form.add_error(None,
+                                       f"Not enough questions available. Need {questions_per_student}, have {len(all_questions)}")
+                        return render(request, 'quiz/exam_form.html', {'form': form})
+
+                    # Save exam first without questions
+                    exam.save()
+
+                    # For each student in the group, create a personalized set of questions
+                    students = exam.group.student_set.all()
+                    for student in students:
+                        # Select random questions
+                        selected_questions = random.sample(all_questions, questions_per_student)
+
+                        # Create a personalized exam result with these questions
+                        exam_result = ExamResult.objects.create(
+                            exam=exam,
+                            student=student
+                        )
+                        exam_result.questions.set(selected_questions)
+
+                    messages.success(request, f"Exam created with {questions_per_student} random questions per student")
+                    return redirect('lecturer_dashboard')
+
+                except Exception as e:
+                    form.add_error(None, str(e))
+                    return render(request, 'quiz/exam_form.html', {'form': form})
+
+            else:
+                # Manual selection
+                exam.save()
+                form.save_m2m()  # Save the many-to-many data (questions)
+                messages.success(request, "Exam created successfully")
+                return redirect('lecturer_dashboard')
+    else:
+        form = MidtermExamForm(user=request.user)
+
+    return render(request, 'quiz/exam_form.html', {'form': form})
+
+def create_exam_with_random_questions(subject, group, due_date, time_limit, created_by, questions_per_student=6):
+    """
+    Creates an exam with randomly selected questions for each student,
+    ensuring even distribution across the question pool.
+
+    Args:
+        subject: Subject instance
+        group: Group instance
+        due_date: Exam due date
+        time_limit: Exam duration in minutes
+        created_by: User who created the exam
+        questions_per_student: Number of questions per student
+    """
+    # Get all questions for the subject
+    all_questions = list(TestQuestion.objects.filter(subject=subject).order_by('id'))
+    total_questions = len(all_questions)
+
+    if total_questions < questions_per_student:
+        raise ValueError(f"Not enough questions available. Need {questions_per_student}, have {total_questions}")
+
+    # Calculate how many questions to select from each segment
+    segment_size = total_questions // questions_per_student
+    remainder = total_questions % questions_per_student
+
+    # Create the exam
+    with transaction.atomic():
+        exam = MidtermExam.objects.create(
+            subject=subject,
+            group=group,
+            due_date=due_date,
+            time_limit=time_limit,
+            created_by=created_by
+        )
+
+        # Select questions using segmented random selection
+        selected_questions = []
+        for i in range(questions_per_student):
+            # Calculate segment boundaries
+            start = i * segment_size
+            end = (i + 1) * segment_size
+
+            # Adjust for remainder if needed
+            if i < remainder:
+                start += i
+                end += i + 1
+            else:
+                start += remainder
+                end += remainder
+
+            # Select one random question from this segment
+            segment_questions = all_questions[start:end]
+            if segment_questions:
+                selected_questions.append(random.choice(segment_questions))
+
+        # Add selected questions to exam
+        exam.questions.set(selected_questions)
+
+        return exam
+

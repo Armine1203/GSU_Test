@@ -224,7 +224,7 @@
                         <select class="form-select form-select-lg" name="{{ form.subject.name }}"
                                 style="background-color: white; border: 1px solid #dee2e6; color: #212529;">
                             {% for value, label in form.subject.field.choices %}
-                            <option value="{{ value }}" {% if form.subject.value== value %}selected{% endif %}>
+                            <option value="{{ value }}" {% if form.subject.value == value %}selected{% endif %}>
                                 {{ label }}
                             </option>
                             {% endfor %}
@@ -240,7 +240,7 @@
                         <select class="form-select form-select-lg" name="{{ form.group.name }}"
                                 style="background-color: white; border: 1px solid #dee2e6; color: #212529;">
                             {% for value, label in form.group.field.choices %}
-                            <option value="{{ value }}" {% if form.group.value== value %}selected{% endif %}>
+                            <option value="{{ value }}" {% if form.group.value == value %}selected{% endif %}>
                                 {{ label }}
                             </option>
                             {% endfor %}
@@ -299,6 +299,22 @@
                         {% endif %}
                     </div>
 
+                    <div class="mb-4">
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="useRandomSwitch" name="use_random">
+                            <label class="form-check-label text-dark" for="useRandomSwitch">
+                                Use Random Question Selection
+                            </label>
+                        </div>
+
+                        <div id="randomOptions" style="display: none;">
+                            <label class="form-label text-dark">Number of Questions per Student</label>
+                            <input type="number" class="form-control form-control-lg" name="questions_per_student"
+                                   min="1" max="50" value="6"
+                                   style="background-color: white; border: 1px solid #dee2e6; color: #212529;">
+                        </div>
+                    </div>
+
                     <div class="d-grid gap-2">
                         <button type="submit" class="btn btn-primary btn-lg">
                             <i class="bi bi-plus-circle"></i> Ստեղծել
@@ -309,6 +325,36 @@
         </div>
     </div>
 </div>
+<!-- Add this JavaScript at the end of your modal -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const useRandomSwitch = document.getElementById('useRandomSwitch');
+    const randomOptions = document.getElementById('randomOptions');
+    const questionsField = document.querySelector('.question-checkboxes');
+
+    if (useRandomSwitch) {
+        // Initial state
+        if (useRandomSwitch.checked) {
+            randomOptions.style.display = 'block';
+            if (questionsField) questionsField.style.display = 'none';
+        } else {
+            randomOptions.style.display = 'none';
+            if (questionsField) questionsField.style.display = 'block';
+        }
+
+        // Change handler
+        useRandomSwitch.addEventListener('change', function() {
+            if (this.checked) {
+                randomOptions.style.display = 'block';
+                if (questionsField) questionsField.style.display = 'none';
+            } else {
+                randomOptions.style.display = 'none';
+                if (questionsField) questionsField.style.display = 'block';
+            }
+        });
+    }
+});
+</script>
 
 <!-- New Questions Modal -->
 <div class="modal fade" id="questionsModal" tabindex="-1" aria-hidden="true">
