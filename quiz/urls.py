@@ -18,6 +18,8 @@ urlpatterns = [
     path('questions/<int:subject_id>/', views.ViewQuestions.as_view(), name='view_questions'),
     path('questions/delete/<int:pk>/', views.DeleteQuestion.as_view(), name='delete_question'),
     path('add_questions/', views.AddQuestion.as_view(), name='add_question'),
+    path('get-question/<int:question_id>/', views.get_question, name='get_question'),
+    path('update-question/', views.update_question, name='update_question'),
 
     # API endpoints
     path('api/questions/', views.api_questions_list, name='api_questions_list'),

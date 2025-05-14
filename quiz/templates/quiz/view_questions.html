@@ -3,14 +3,14 @@
 {% block title %}Հարցերի ցանկ - {{ subject.name }}{% endblock %}
 
 {% block body %}
-<div class="container mt-5 mb-5">
-    <div class="card">
-        <div class="card-header bg-primary text-white">
-            <h2>{{ subject.name }} - Հարցեր</h2>
+<div class="container mt-5 mb-5" style="background-color: #f8f9fa; padding: 20px; border-radius: 10px;">
+    <div class="card" style="background-color: #f8f9fa; border: 1px solid #dee2e6;">
+        <div class="card-header" style="background-color: #e9ecef; border-bottom: 1px solid #dee2e6;">
+            <h2 class="text-dark mb-0">{{ subject.name }} - Հարցեր</h2>
         </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-striped">
+                <table class="table table-striped table-light">
                     <thead>
                     <tr>
                         <th>Հարց</th>
@@ -38,16 +38,14 @@
                                 <!-- Edit Button -->
                                 <button type="button"
                                         class="btn btn-sm btn-outline-primary edit-question"
-                                        data-id="{{ question.id }}"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#editQuestionModal">
-        <span class="d-flex align-items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil me-1"
-                 viewBox="0 0 16 16">
-                <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/>
-            </svg>
-            Փոփոխել
-        </span>
+                                        data-id="{{ question.id }}">
+    <span class="d-flex align-items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil me-1"
+             viewBox="0 0 16 16">
+            <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/>
+        </svg>
+        Փոփոխել
+    </span>
                                 </button>
 
                                 <!-- Delete Button -->
@@ -81,59 +79,51 @@
 
 <div class="modal fade" id="editQuestionModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-warning text-white">
-                <h5 class="modal-title">Խմբագրել հարցը</h5>
+        <div class="modal-content" style="background-color: #f8f9fa;">
+            <div class="modal-header" style="background-color: #e9ecef; border-bottom: 1px solid #dee2e6;">
+                <h5 class="modal-title text-dark">Խմբագրել հարցը</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="editQuestionForm" class="text-white">
+                <form id="editQuestionForm">
                     {% csrf_token %}
                     <input type="hidden" id="editQuestionId">
 
                     <!-- Question Text -->
                     <div class="mb-3">
-                        <label class="form-label text-white">Հարց</label>
-                        <textarea class="form-control bg-dark text-white border-secondary"
+                        <label class="form-label text-dark">Հարց</label>
+                        <textarea class="form-control bg-light text-dark border-secondary"
                                   id="editQuestionText" rows="3" required></textarea>
-                    </div>
-
-                    <!-- Image Upload (hidden since you don't need it) -->
-                    <div class="mb-3 d-none">
-                        <label class="form-label text-white">Նկար</label>
-                        <input type="file" class="form-control bg-dark text-white border-secondary"
-                               id="editQuestionImage">
-                        <div id="currentImageContainer" class="mt-2"></div>
                     </div>
 
                     <!-- Options -->
                     <div class="row g-2 mb-3">
                         <div class="col-md-6">
-                            <label class="form-label text-white">Տարբերակ 1</label>
-                            <input type="text" class="form-control bg-dark text-white border-secondary"
+                            <label class="form-label text-dark">Տարբերակ 1</label>
+                            <input type="text" class="form-control bg-light text-dark border-secondary"
                                    id="editOption1" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label text-white">Տարբերակ 2</label>
-                            <input type="text" class="form-control bg-dark text-white border-secondary"
+                            <label class="form-label text-dark">Տարբերակ 2</label>
+                            <input type="text" class="form-control bg-light text-dark border-secondary"
                                    id="editOption2" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label text-white">Տարբերակ 3</label>
-                            <input type="text" class="form-control bg-dark text-white border-secondary"
+                            <label class="form-label text-dark">Տարբերակ 3</label>
+                            <input type="text" class="form-control bg-light text-dark border-secondary"
                                    id="editOption3" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label text-white">Տարբերակ 4</label>
-                            <input type="text" class="form-control bg-dark text-white border-secondary"
+                            <label class="form-label text-dark">Տարբերակ 4</label>
+                            <input type="text" class="form-control bg-light text-dark border-secondary"
                                    id="editOption4" required>
                         </div>
                     </div>
 
                     <!-- Correct Answer -->
                     <div class="mb-3">
-                        <label class="form-label text-white">Ճիշտ պատասխան</label>
-                        <select class="form-select bg-dark text-white border-secondary"
+                        <label class="form-label text-dark">Ճիշտ պատասխան</label>
+                        <select class="form-select bg-light text-dark border-secondary"
                                 id="editCorrectOption" required>
                             <option value="A">Տարբերակ 1</option>
                             <option value="B">Տարբերակ 2</option>
@@ -144,8 +134,8 @@
 
                     <!-- Score -->
                     <div class="mb-3">
-                        <label class="form-label text-white">Միավոր</label>
-                        <input type="number" class="form-control bg-dark text-white border-secondary"
+                        <label class="form-label text-dark">Միավոր</label>
+                        <input type="number" class="form-control bg-light text-dark border-secondary"
                                id="editScore" min="1" value="1" required>
                     </div>
 
@@ -158,4 +148,110 @@
         </div>
     </div>
 </div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function() {
+    // Initialize modal
+    var editModal = new bootstrap.Modal(document.getElementById('editQuestionModal'));
+
+    // Handle edit button clicks
+    $('.edit-question').click(function(e) {
+        e.preventDefault();
+        var questionId = $(this).data('id');
+        var $button = $(this);
+
+        // Show loading state
+        $button.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading...');
+
+        // Fetch question data via AJAX
+        $.ajax({
+            url: '/get-question/' + questionId + '/',
+            type: 'GET',
+            success: function(response) {
+                // Check if response has error
+                if (response.error) {
+                    alert('Error: ' + response.error);
+                    return;
+                }
+
+                // Populate modal fields
+                $('#editQuestionId').val(response.id);
+                $('#editQuestionText').val(response.question);
+                $('#editOption1').val(response.option1);
+                $('#editOption2').val(response.option2);
+                $('#editOption3').val(response.option3);
+                $('#editOption4').val(response.option4);
+                $('#editCorrectOption').val(response.correct_option);
+                $('#editScore').val(response.score || 1);
+
+                // Show modal
+                editModal.show();
+            },
+            error: function(xhr) {
+                alert('Error loading question: ' + xhr.statusText);
+            },
+            complete: function() {
+                $button.prop('disabled', false).html(`
+                    <span class="d-flex align-items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil me-1" viewBox="0 0 16 16">
+                            <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/>
+                        </svg>
+                        Փոփոխել
+                    </span>
+                `);
+            }
+        });
+    });
+
+    // Handle form submission
+    $('#editQuestionForm').submit(function(e) {
+        e.preventDefault();
+
+        var $form = $(this);
+        var submitBtn = $form.find('button[type="submit"]');
+        submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...');
+
+        // Get CSRF token
+        var csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
+
+        var formData = {
+            id: $('#editQuestionId').val(),
+            question: $('#editQuestionText').val(),
+            option1: $('#editOption1').val(),
+            option2: $('#editOption2').val(),
+            option3: $('#editOption3').val(),
+            option4: $('#editOption4').val(),
+            correct_option: $('#editCorrectOption').val(),
+            score: $('#editScore').val(),
+            csrfmiddlewaretoken: csrfToken
+        };
+
+        $.ajax({
+            url: '/update-question/',
+            type: 'POST',
+            data: formData,
+            headers: {
+                "X-CSRFToken": csrfToken
+            },
+            success: function(response) {
+                if(response.success) {
+                    editModal.hide();
+                    // Show success message
+                    alert('Question updated successfully!');
+                    location.reload();
+                } else {
+                    alert('Error: ' + (response.error || 'Unknown error'));
+                }
+            },
+            error: function(xhr) {
+                alert('Error: ' + xhr.statusText);
+            },
+            complete: function() {
+                submitBtn.prop('disabled', false).text('Պահպանել');
+            }
+        });
+    });
+});
+</script>
 {% endblock %}

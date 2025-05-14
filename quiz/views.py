@@ -19,8 +19,7 @@ from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse
 from django.views.generic import View
 from docx import Document
-from openpyxl import Workbook
-from io import BytesIO
+from django.views.decorators.csrf import csrf_exempt
 
 # Create your views here.
 @method_decorator(login_required, name="dispatch")
@@ -856,3 +855,61 @@ def create_exam_with_random_questions(subject, group, due_date, time_limit, crea
 
         return exam
 
+
+
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+
+@csrf_exempt  # Temporarily add this for testing, remove in production
+def get_question(request, question_id):
+    try:
+        question = TestQuestion.objects.get(id=question_id)
+        # Verify the requesting user owns this question
+        if question.creator != request.user:
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+
+        return JsonResponse({
+            'id': question.id,
+            'question': question.question,
+            'option1': question.option1,
+            'option2': question.option2,
+            'option3': question.option3,
+            'option4': question.option4,
+            'correct_option': question.correct_option,
+            'score': question.score
+        })
+    except TestQuestion.DoesNotExist:
+        return JsonResponse({'error': 'Question not found'}, status=404)
+
+@csrf_exempt  # Temporarily add this for testing, remove in production
+def update_question(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+    try:
+        question_id = request.POST.get('id')
+        if not question_id:
+            return JsonResponse({'error': 'Question ID is required'}, status=400)
+
+        question = TestQuestion.objects.get(id=question_id)
+
+        # Verify the requesting user owns this question
+        if question.creator != request.user:
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+
+        # Update question fields
+        question.question = request.POST.get('question', question.question)
+        question.option1 = request.POST.get('option1', question.option1)
+        question.option2 = request.POST.get('option2', question.option2)
+        question.option3 = request.POST.get('option3', question.option3)
+        question.option4 = request.POST.get('option4', question.option4)
+        question.correct_option = request.POST.get('correct_option', question.correct_option)
+        question.score = int(request.POST.get('score', question.score))
+        question.save()
+
+        return JsonResponse({'success': True})
+
+    except TestQuestion.DoesNotExist:
+        return JsonResponse({'error': 'Question not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
