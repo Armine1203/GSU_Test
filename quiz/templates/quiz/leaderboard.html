@@ -3,19 +3,19 @@
 {% block title %}Քննությունների արդյունքներ{% endblock %}
 
 {% block body %}
-<div class="container mt-5 mb-5">
+<div class="container mt-5 mb-5" style="background-color: #f8f9fa; padding: 20px; border-radius: 10px;">
     {% if user_type == 'lecturer' %}
     <!-- Lecturer View -->
     <div class="row mb-4">
-        <h1 class="text-center">Քննությունների արդյունքներ</h1>
-        <div class="col-md-6 offset-md-3">
-            <form method="get" class="card">
-                <div class="card-header bg-info text-white">
-                    Ընտրել խումբ
+        <h1 class="mb-0 text-dark text-center">Քննությունների արդյունքներ</h1>
+        <div class="col-md-6 offset-md-3 mt-3">
+            <form method="get" class="card" style="background-color: white; border: 1px solid #dee2e6;">
+                <div class="card-header" style="background-color: #e9ecef; border-bottom: 1px solid #dee2e6;">
+                    <h5 class="mb-0 text-dark">Խմբեր</h5>
                 </div>
                 <div class="card-body">
-                    <select name="group" class="form-select" onchange="this.form.submit()">
-                        <option value="">-- Ընտրել խումբ --</option>
+                    <select name="group" class="form-select" onchange="this.form.submit()" style="background-color: white; border: 1px solid #dee2e6; color: #212529;">
+                        <option value="">-- Ընտրել խումբը --</option>
                         {% for group in groups %}
                         <option value="{{ group.id }}"
                                 {% if selected_group and selected_group.id == group.id %}selected{% endif %}>
@@ -33,20 +33,20 @@
         <div class="col-md-6 offset-md-3 text-center">
             <div class="btn-group">
                 <a href="?group={{ selected_group.id }}&export=word" class="btn btn-success">
-                    <i class="fas fa-file-word"></i> Ներբեռնել արդյունքների Word ֆայլը
+                    <i class="bi bi-file-word"></i> Ներբեռնել արդյունքների Word ֆայլը
                 </a>
             </div>
         </div>
     </div>
     {% endif %}
-    {% endif %} {# This closes the user_type == 'lecturer' check #}
+    {% endif %}
 
     {% if error %}
-    <div class="alert alert-danger text-center mt-4">
+    <div class="alert alert-danger text-center mt-4" style="background-color: #f8d7da; border-color: #f5c6cb; color: #721c24;">
         {{ error }}
     </div>
     {% elif no_exams %}
-    <div class="alert alert-warning text-center mt-4">
+    <div class="alert alert-warning text-center mt-4" style="background-color: #fff3cd; border-color: #ffeeba; color: #856404;">
         {% if user_type == 'student' %}
         Ձեր խմբի համար դեռ քննություններ չեն ստեղծվել։
         {% else %}
@@ -56,46 +56,46 @@
     {% elif group_exams %}
     <div class="row">
         {% if user_type == 'lecturer' and selected_group %}
-        <h2 class="text-center mb-4">{{ selected_group.name }} խումբ</h2>
+        <h2 class="text-center mb-4 text-dark">{{ selected_group.name }} խումբ</h2>
         {% endif %}
 
         {% for exam in group_exams %}
-        <div class="card mb-4">
-            <div class="card-header bg-primary text-white">
-                <h5>{{ exam.subject.name }}</h5>
-                <small>Ամսաթիվ: {{ exam.due_date|date:"d.m.Y H:i" }}</small>
+        <div class="card mb-4" style="background-color: white; border: 1px solid #dee2e6;">
+            <div class="card-header" style="background-color: #e9ecef; border-bottom: 1px solid #dee2e6;">
+                <h5 class="mb-0 text-dark">{{ exam.subject.name }}</h5>
+                <small class="text-dark">Ամսաթիվ: {{ exam.due_date|date:"d.m.Y H:i" }}</small>
                 {% if user_type == 'lecturer' %}
-                <span class="badge bg-light text-dark float-end">
+                <span class="badge bg-secondary float-end" style="background-color: #6c757d;">
                     {{ exam.questions.count }} հարց
                 </span>
                 {% endif %}
             </div>
-            <div class="card-body">
+            <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover">
+                    <table class="table table-hover m-0 table-light">
                         <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Ուսանող</th>
-                            <th>ID</th>
-                            <th>Միավոր</th>
-                            <th>Տոկոս</th>
+                        <tr style="background-color: #e9ecef;">
+                            <th class="text-dark">#</th>
+                            <th class="text-dark">Ուսանող</th>
+                            <th class="text-dark">ID</th>
+                            <th class="text-dark">Միավոր</th>
+                            <th class="text-dark">Տոկոս</th>
                         </tr>
                         </thead>
                         <tbody>
                         {% for result in exam_results %}
                         {% if result.exam.id == exam.id %}
-                        <tr {% if user_type == 'student' and result.student.user == request.user %}class="table-active"{% endif %}>
-                            <td>{{ forloop.counter }}</td>
-                            <td>
+                        <tr style="background-color: white;">
+                            <td class="text-dark">{{ forloop.counter }}</td>
+                            <td class="text-dark">
                                 {{ result.student.name }} {{ result.student.last_name }}
                                 {% if user_type == 'student' and result.student.user == request.user %}
-                                <span class="badge bg-info">Դուք</span>
+                                <span class="badge bg-info text-dark" style="background-color: #bee5eb;">Դուք</span>
                                 {% endif %}
                             </td>
-                            <td>{{ result.student.id_number }}</td>
-                            <td>{{ result.score }}</td>
-                            <td>
+                            <td class="text-dark">{{ result.student.id_number }}</td>
+                            <td class="text-dark">{{ result.score }}</td>
+                            <td class="text-dark">
                                 <div class="progress" style="height: 25px;">
                                     <div class="progress-bar
                                                 {% if result.percentage >= 80 %}bg-success
@@ -103,15 +103,15 @@
                                                 {% else %}bg-danger
                                                 {% endif %}"
                                          style="width: {{ result.percentage }}%">
-                                        {{ result.percentage|floatformat:1 }}%
+                                        <span class="text-light">{{ result.percentage|floatformat:1 }}%</span>
                                     </div>
                                 </div>
                             </td>
                         </tr>
                         {% endif %}
                         {% empty %}
-                        <tr>
-                            <td colspan="{% if user_type == 'lecturer' %}6{% else %}5{% endif %}" class="text-center">
+                        <tr style="background-color: white;">
+                            <td colspan="5" class="text-center text-dark">
                                 Այս քննության համար արդյունքներ չկան
                             </td>
                         </tr>
@@ -125,4 +125,16 @@
     </div>
     {% endif %}
 </div>
+
+<style>
+    .progress-bar {
+        position: relative;
+    }
+    .progress-bar span {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        font-weight: bold;
+    }
+</style>
 {% endblock %}

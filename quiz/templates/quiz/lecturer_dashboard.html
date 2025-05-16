@@ -224,7 +224,7 @@
                         <select class="form-select form-select-lg" name="{{ form.subject.name }}"
                                 style="background-color: white; border: 1px solid #dee2e6; color: #212529;">
                             {% for value, label in form.subject.field.choices %}
-                            <option value="{{ value }}" {% if form.subject.value== value %}selected{% endif %}>
+                            <option value="{{ value }}" {% if form.subject.value == value %}selected{% endif %}>
                                 {{ label }}
                             </option>
                             {% endfor %}
@@ -240,7 +240,7 @@
                         <select class="form-select form-select-lg" name="{{ form.group.name }}"
                                 style="background-color: white; border: 1px solid #dee2e6; color: #212529;">
                             {% for value, label in form.group.field.choices %}
-                            <option value="{{ value }}" {% if form.group.value== value %}selected{% endif %}>
+                            <option value="{{ value }}" {% if form.group.value == value %}selected{% endif %}>
                                 {{ label }}
                             </option>
                             {% endfor %}

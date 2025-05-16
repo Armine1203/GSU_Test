@@ -1,12 +1,12 @@
 {% extends "layout.html" %}
 
-{% block title %}Quiz{% endblock %}
+{% block title %}Քննություն{% endblock %}
 
 {% block body %}
 <div class="container mt-5 mb-5">
-    <div class="alert alert-warning text-center" role="alert">
-        Մնացած ժամանակը՝ <strong><span id="timer"></span></strong>
-    </div>
+     <div class="alert alert-warning text-center" style="background-color: white; color: #664d03; border-color: #ffecb5;" role="alert">
+                Մնացած ժամանակը՝ <strong><span id="timer"></span></strong>
+     </div>
 
     <form method="post" action="{% url 'quiz' %}">
         {% csrf_token %}
@@ -15,12 +15,12 @@
         <h1 class="text-center">Թեստ</h1>
 
         {% for question in questions %}
-        <div class="card border-info mb-4">
-            <div class="card-header bg-info text-white">
+        <div class="card mb-4" style="border: 1px solid #dee2e6;">
+                    <div class="card-header" style="background-color: #e9ecef; color: #495057; border-bottom: 1px solid #dee2e6;">
                 Հարց {{ forloop.counter }}
             </div>
-            <div class="card-body">
-                <h5 class="user-select-none">{{ question.question }}</h5>
+            <div class="card-body" style="background-color: #f8f9fa;">
+                <h5 class="user-select-none" style="color: #212529;">{{ question.question }}</h5>
 
                 {% if question.image %}
                 <div class="mb-3 text-center">
@@ -33,25 +33,25 @@
 
                 <div class="form-check">
                     <input class="form-check-input" type="radio" name="q{{ question.id }}o" id="q{{ question.id }}o1" value="A" required>
-                    <label class="form-check-label" for="q{{ question.id }}o1">
+                    <label class="form-check-label" for="q{{ question.id }}o1" style="color: #212529;">
                         {{ question.option1 }}
                     </label>
                 </div>
                 <div class="form-check">
                     <input class="form-check-input" type="radio" name="q{{ question.id }}o" id="q{{ question.id }}o2" value="B">
-                    <label class="form-check-label" for="q{{ question.id }}o2">
+                    <label class="form-check-label" for="q{{ question.id }}o2" style="color: #212529;">
                         {{ question.option2 }}
                     </label>
                 </div>
                 <div class="form-check">
                     <input class="form-check-input" type="radio" name="q{{ question.id }}o" id="q{{ question.id }}o3" value="C">
-                    <label class="form-check-label" for="q{{ question.id }}o3">
+                    <label class="form-check-label" for="q{{ question.id }}o3" style="color: #212529;">
                         {{ question.option3 }}
                     </label>
                 </div>
                 <div class="form-check">
                     <input class="form-check-input" type="radio" name="q{{ question.id }}o" id="q{{ question.id }}o4" value="D">
-                    <label class="form-check-label" for="q{{ question.id }}o4">
+                    <label class="form-check-label" for="q{{ question.id }}o4" style="color: #212529;">
                         {{ question.option4 }}
                     </label>
                 </div>
