@@ -165,3 +165,29 @@ class ExamResult(models.Model):
 
     def __str__(self):
         return f"{self.student} - {self.exam} ({self.score}/{self.total_questions})"
+
+
+class Feedback(models.Model):
+    FEEDBACK_TYPES = [
+        ('problem', 'Խնդիր'),
+        ('suggestion', 'Առաջարկություն'),
+        ('compliment', 'Շնորհակալություն'),
+    ]
+    URGENCY_LEVELS = [
+        ('low', 'Ցածր'),
+        ('medium', 'Միջին'),
+        ('high', 'Բարձր'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    feedback_type = models.CharField(max_length=20, choices=FEEDBACK_TYPES)
+    name = models.CharField(max_length=100)
+    email = models.EmailField()
+    subject = models.CharField(max_length=200)
+    message = models.TextField()
+    urgency = models.CharField(max_length=20, choices=URGENCY_LEVELS, default='medium')
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.subject} ({self.get_feedback_type_display()})"

@@ -2,6 +2,8 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth import get_user_model
 from .models import *
+from django.contrib import admin
+from .models import Feedback
 
 # Unregister the default User admin if needed
 from django.contrib.auth import get_user_model
@@ -94,7 +96,11 @@ class ExamResultAdmin(admin.ModelAdmin):
 
     percentage_display.short_description = 'Score %'
 
-
+@admin.register(Feedback)
+class FeedbackAdmin(admin.ModelAdmin):
+    list_display = ('subject','urgency', 'feedback_type', 'name', 'created_at', 'resolved')
+    list_filter = ('feedback_type', 'resolved')
+    search_fields = ('subject', 'message', 'name')
 
 #admin.site.register(User, CustomUserAdmin)
 admin.site.register(Faculty, FacultyAdmin)

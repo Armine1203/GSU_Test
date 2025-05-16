@@ -42,7 +42,7 @@
                     <a class="nav-link text-center" href="{% url 'add_question' %}">Ավելացնել Հարցեր</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link text-center" href="{% url 'manage' %}">Բեռնել հարցեր</a>
+                    <a class="nav-link text-center" href="{% url 'upload_question' %}">Բեռնել հարցեր</a>
                 </li>
 
                 {% else %}
@@ -57,6 +57,9 @@
                 </li>
                 {% endif %}
                 <li class="nav-item">
+                    <a class="nav-link text-center" href="{% url 'feedback_form' %}">Հետադարձ կապ</a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link text-center" href="{% url 'logout' %}">Դուրս գալ</a>
                 </li>
                 {% else %}
@@ -64,6 +67,7 @@
                     <a class="nav-link text-center" href="{% url 'login' %}">Մուտք</a>
                 </li>
                 {% endif %}
+
             </ul>
         </div>
     </div>

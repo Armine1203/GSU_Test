@@ -1,5 +1,5 @@
 from django import forms
-from .models import Subject, Major, MidtermExam, Group
+from .models import Subject, Major, MidtermExam, Group,Feedback
 
 
 class SubjectForm(forms.ModelForm):
@@ -73,3 +73,11 @@ class MidtermExamForm(forms.ModelForm):
             raise forms.ValidationError("Please select questions or enable random selection")
 
         return cleaned_data
+
+class FeedbackForm(forms.ModelForm):
+    class Meta:
+        model = Feedback
+        fields = ['feedback_type', 'name', 'email', 'subject', 'message', 'urgency']
+        widgets = {
+            'message': forms.Textarea(attrs={'rows': 5}),
+        }

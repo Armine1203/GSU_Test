@@ -37,4 +37,7 @@ urlpatterns = [
     path('results/', results, name='results'),  # List of all results
     path('results/<int:result_id>/', views.result_detail, name='result_detail'),  # Detailed view of a specific result
 
+    #feedback
+path('feedback/', views.feedback_view, name='feedback_form'),
+    path('feedback/success/', views.feedback_success, name='feedback_success'),
 ]

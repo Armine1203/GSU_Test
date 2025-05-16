@@ -1,31 +1,13 @@
 import csv
-
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.views import View
-from django.urls import reverse
-from django.conf import settings
 from django.contrib import messages
 from django.utils.decorators import method_decorator
 from django.contrib.admin.views.decorators import staff_member_required
-from quiz.models import Mark, TestQuestion, Subject
-from os.path import join
+from quiz.models import TestQuestion, Subject
+import chardet  # For encoding detection
 
-# Create your views here.
-@method_decorator(staff_member_required, name="dispatch")
-class Manage(View):
-    def get(self, request):
-        panel_options = {
-            "Ավելացնել հարցեր": {
-                "link": reverse("upload_question"),
-                "btntxt": "Բեռնել"
-            },
-        }
-        return render(
-            request,
-            "management/manage.html",
-            {"panel_options": panel_options}
-        )
 
 class UploadQuestion(View):
     def get(self, request):
@@ -34,7 +16,7 @@ class UploadQuestion(View):
         elif hasattr(request.user, 'lecturer'):
             subjects = request.user.lecturer.subjects.all()
         else:
-            messages.error(request, "You don't have permission to upload questions")
+            messages.error(request, "Դուք չունեք հարցեր բեռնելու թույլտվություն")
             return redirect("index")
 
         return render(request, "management/upload_question.html", {
@@ -47,12 +29,12 @@ class UploadQuestion(View):
 
         # Validate file
         if not q_file or not str(q_file).endswith(".csv"):
-            messages.warning(request, "Please upload a valid CSV file")
+            messages.warning(request, "Խնդրում ենք ներբեռնել ճիշտ CSV ֆայլ")
             return redirect("upload_question")
 
         # Validate subject selection
         if not subject_id:
-            messages.warning(request, "Please select a subject")
+            messages.warning(request, "Խնդրում ենք ընտրել առարկան")
             return redirect("upload_question")
 
         try:
@@ -61,23 +43,39 @@ class UploadQuestion(View):
             # Verify permission
             if not request.user.is_staff:
                 if not hasattr(request.user, 'lecturer'):
-                    messages.error(request, "Only lecturers can upload questions")
+                    messages.error(request, "Միայն դասախոսները կարող են բեռնել հարցեր")
                     return redirect("index")
                 if not subject.lecturers.filter(id=request.user.id).exists():
-                    messages.error(request, "You don't teach this subject")
+                    messages.error(request, "Դուք չեք դասավանդում այս առարկան")
                     return redirect("upload_question")
 
             # Process CSV with proper encoding handling
-            try:
-                # First try UTF-8
-                decoded_file = q_file.read().decode('utf-8-sig').splitlines()
-            except UnicodeDecodeError:
-                # Fallback to other encodings if needed
+            file_content = q_file.read()
+
+            # Try to detect encoding
+            detected = chardet.detect(file_content)
+            encodings_to_try = [
+                detected['encoding'],  # Try detected encoding first
+                'utf-8-sig',  # UTF-8 with BOM
+                'utf-8',  # Standard UTF-8
+                'utf-16',  # UTF-16
+                'windows-1252',  # Common Windows encoding
+                'iso-8859-1'  # Latin-1
+            ]
+
+            decoded_file = None
+            for encoding in encodings_to_try:
+                if not encoding:
+                    continue
                 try:
-                    decoded_file = q_file.read().decode('utf-16').splitlines()
-                except UnicodeDecodeError:
-                    messages.error(request, "Unsupported file encoding. Please use UTF-8 or UTF-16.")
-                    return redirect("upload_question")
+                    decoded_file = file_content.decode(encoding).splitlines()
+                    break
+                except (UnicodeDecodeError, LookupError):
+                    continue
+
+            if not decoded_file:
+                messages.error(request, "Չհաջողվեց վերծանել ֆայլի կոդավորումը: Խնդրում ենք օգտագործել UTF-8 կոդավորում")
+                return redirect("upload_question")
 
             reader = csv.DictReader(decoded_file)
 
@@ -89,42 +87,47 @@ class UploadQuestion(View):
                     # Ensure all text fields are properly encoded
                     question = TestQuestion(
                         subject=subject,
-                        question=row['question'],
-                        option1=row['option1'],
-                        option2=row['option2'],
-                        option3=row['option3'],
-                        option4=row['option4'],
-                        correct_option=row['correct_option'].upper(),
-                        score=int(row.get('score', 1)),
+                        question=row['Հարց'],
+                        option1=row['պատասխան1'],
+                        option2=row['պատասխան2'],
+                        option3=row['պատասխան3'],
+                        option4=row['պատասխան4'],
+                        correct_option=row['Ճիշտ պատասխան'].upper(),
+                        score=int(row.get('միավոր', 1)),
                         creator=request.user
                     )
                     question.save()
                     created_count += 1
                 except Exception as e:
-                    error_rows.append(f"Row {i}: {str(e)}")
+                    error_rows.append(f"Տող {i}: {str(e)}")
                     continue
 
             if created_count:
-                messages.success(request, f"Successfully uploaded {created_count} questions")
+                messages.success(request, f"Հաջողությամբ բեռնվեց {created_count} հարց")
             if error_rows:
-                messages.warning(request, f"Errors in {len(error_rows)} rows")
-                for error in error_rows[:3]:
+                messages.warning(request, f"Սխալներ {len(error_rows)} տողերում")
+                for error in error_rows[:3]:  # Show first 3 errors only
                     messages.info(request, error)
 
         except Subject.DoesNotExist:
-            messages.error(request, "Selected subject doesn't exist")
+            messages.error(request, "Ընտրված առարկան գոյություն չունի")
         except Exception as e:
-            messages.error(request, f"Error processing file: {str(e)}")
+            messages.error(request, f"Ֆայլի մշակման սխալ: {str(e)}")
 
         return redirect("upload_question")
+
 
 @method_decorator(staff_member_required, name="dispatch")
 class DownloadQuestionTemplate(View):
     def get(self, request):
-        response = HttpResponse(content_type='text/csv')
+        response = HttpResponse(content_type='text/csv; charset=utf-8')
         response['Content-Disposition'] = 'attachment; filename="question_template.csv"'
 
         writer = csv.writer(response)
+
+        # Write BOM (Byte Order Mark) for UTF-8
+        response.write('\ufeff'.encode('utf-8'))
+
         writer.writerow([
             'question',
             'option1',
@@ -135,9 +138,9 @@ class DownloadQuestionTemplate(View):
             'score'
         ])
 
-        # Add example row
+        # Add example row with Armenian characters
         writer.writerow([
-            'Ո՞րն է մայրաքաղաքը...',
+            'Ո՞րն է Հայաստանի մայրաքաղաքը',
             'Երևան',
             'Մոսկվա',
             'Տոկիո',
@@ -147,3 +150,4 @@ class DownloadQuestionTemplate(View):
         ])
 
         return response
+

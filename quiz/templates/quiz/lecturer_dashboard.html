@@ -220,7 +220,7 @@
 
                     <!-- Subject Field -->
                     <div class="mb-4">
-                        <label class="form-label text-dark">{{ form.subject.label }}</label>
+                            <label class="form-label text-dark">Առարկա</label>
                         <select class="form-select form-select-lg" name="{{ form.subject.name }}"
                                 style="background-color: white; border: 1px solid #dee2e6; color: #212529;">
                             {% for value, label in form.subject.field.choices %}
@@ -236,7 +236,7 @@
 
                     <!-- Group Field -->
                     <div class="mb-4">
-                        <label class="form-label text-dark">{{ form.group.label }}</label>
+                        <label class="form-label text-dark">Խումբ</label>
                         <select class="form-select form-select-lg" name="{{ form.group.name }}"
                                 style="background-color: white; border: 1px solid #dee2e6; color: #212529;">
                             {% for value, label in form.group.field.choices %}
@@ -253,7 +253,7 @@
                     <div class="row g-3 mb-4">
                         <!-- Due Date Field -->
                         <div class="col-md-6">
-                            <label class="form-label text-dark">{{ form.due_date.label }}</label>
+                            <label class="form-label text-dark">Ավարտի օր/ժամ</label>
                             <input type="datetime-local"
                                    class="form-control form-control-lg"
                                    name="{{ form.due_date.name }}"
@@ -266,7 +266,7 @@
 
                         <!-- Time Limit Field -->
                         <div class="col-md-6">
-                            <label class="form-label text-dark">{{ form.time_limit.label }}</label>
+                            <label class="form-label text-dark">Ժամանակային սահմանափակում</label>
                             <input type="number" class="form-control form-control-lg" name="{{ form.time_limit.name }}"
                                    value="{{ form.time_limit.value|default_if_none:'' }}"
                                    style="background-color: white; border: 1px solid #dee2e6; color: #212529;">
@@ -278,7 +278,7 @@
 
                     <!-- Questions Field -->
                     <div class="mb-4">
-                        <label class="form-label text-dark">{{ form.questions.label }}</label>
+                        <label class="form-label text-dark">Հարցեր</label>
                         <div class="question-checkboxes" style="max-height: 300px; overflow-y: auto;">
                             {% for checkbox in form.questions %}
                             <div class="form-check mb-2">
@@ -303,14 +303,14 @@
                         <div class="form-check form-switch mb-3">
                             <input class="form-check-input" type="checkbox" id="useRandomSwitch" name="use_random">
                             <label class="form-check-label text-dark" for="useRandomSwitch">
-                                Use Random Question Selection
+                                Օգտագործել պատահական հարցերի ընտրության տարբերակը
                             </label>
                         </div>
 
                         <div id="randomOptions" style="display: none;">
-                            <label class="form-label text-dark">Number of Questions per Student</label>
+                            <label class="form-label text-dark">Հարցերի քանակ՝ ըստ ուսանողի</label>
                             <input type="number" class="form-control form-control-lg" name="questions_per_student"
-                                   min="1" max="50" value="6"
+                                   min="1" max="120" value="10"
                                    style="background-color: white; border: 1px solid #dee2e6; color: #212529;">
                         </div>
                     </div>

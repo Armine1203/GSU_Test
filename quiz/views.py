@@ -20,6 +20,8 @@ from django.http import HttpResponse
 from django.views.generic import View
 from docx import Document
 from django.views.decorators.csrf import csrf_exempt
+from .forms import FeedbackForm
+
 
 # Create your views here.
 @method_decorator(login_required, name="dispatch")
@@ -601,7 +603,7 @@ def get_groups_for_subject(request):
 @login_required
 def results(request):
     if not hasattr(request.user, 'student'):
-        return HttpResponseForbidden("You don't have permission to view this page")
+        return HttpResponseForbidden("Դուք չունեք այս էջը տեսնելու թույլտվություն")
 
     exam_id = request.GET.get('exam_id')
 
@@ -913,3 +915,23 @@ def update_question(request):
         return JsonResponse({'error': 'Question not found'}, status=404)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+def feedback_view(request):
+    if request.method == 'POST':
+        form = FeedbackForm(request.POST)
+        if form.is_valid():
+            feedback = form.save(commit=False)
+            if request.user.is_authenticated:
+                feedback.user = request.user
+            feedback.save()
+            messages.success(request, "Շնորհակալություն ձեր հետադարձ կապի համար")
+            return redirect('feedback_success')
+    else:
+        form = FeedbackForm()
+
+    return render(request, 'feedback/feedback_form.html', {'form': form})
+
+
+def feedback_success(request):
+    return render(request, 'feedback/feedback_success.html')
