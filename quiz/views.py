@@ -597,9 +597,6 @@ def get_groups_for_subject(request):
     except Subject.DoesNotExist:
         return JsonResponse({'groups': []}, status=404)
 
-
-
-
 @login_required
 def results(request):
     if not hasattr(request.user, 'student'):
@@ -935,3 +932,4 @@ def feedback_view(request):
 
 def feedback_success(request):
     return render(request, 'feedback/feedback_success.html')
+

@@ -116,7 +116,6 @@ class UploadQuestion(View):
 
         return redirect("upload_question")
 
-
 @method_decorator(staff_member_required, name="dispatch")
 class DownloadQuestionTemplate(View):
     def get(self, request):
@@ -124,10 +123,6 @@ class DownloadQuestionTemplate(View):
         response['Content-Disposition'] = 'attachment; filename="question_template.csv"'
 
         writer = csv.writer(response)
-
-        # Write BOM (Byte Order Mark) for UTF-8
-        response.write('\ufeff'.encode('utf-8'))
-
         writer.writerow([
             'question',
             'option1',
@@ -150,4 +145,3 @@ class DownloadQuestionTemplate(View):
         ])
 
         return response
-
