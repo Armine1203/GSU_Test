@@ -88,12 +88,12 @@ class UploadQuestion(View):
                     question = TestQuestion(
                         subject=subject,
                         question=row['Հարց'],
-                        option1=row['պատասխան1'],
-                        option2=row['պատասխան2'],
-                        option3=row['պատասխան3'],
-                        option4=row['պատասխան4'],
+                        option1=row['Տարբերակ 1'],
+                        option2=row['Տարբերակ 2'],
+                        option3=row['Տարբերակ 3'],
+                        option4=row['Տարբերակ 4'],
                         correct_option=row['Ճիշտ պատասխան'].upper(),
-                        score=int(row.get('միավոր', 1)),
+                        score=int(row.get('Միավոր', 1)),
                         creator=request.user
                     )
                     question.save()
@@ -119,18 +119,18 @@ class UploadQuestion(View):
 @method_decorator(staff_member_required, name="dispatch")
 class DownloadQuestionTemplate(View):
     def get(self, request):
-        response = HttpResponse(content_type='text/csv; charset=utf-8')
-        response['Content-Disposition'] = 'attachment; filename="question_template.csv"'
+        response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+        response['Content-Disposition'] = 'attachment; filename="Հարցի_օրինակ.csv"'
 
         writer = csv.writer(response)
         writer.writerow([
-            'question',
-            'option1',
-            'option2',
-            'option3',
-            'option4',
-            'correct_option',
-            'score'
+            'Հարց',
+            'Տարբերակ 1',
+            'Տարբերակ 2',
+            'Տարբերակ 3',
+            'Տարբերակ 4',
+            'Ճիշտ պատասխան',
+            'Միավոր'
         ])
 
         # Add example row with Armenian characters
