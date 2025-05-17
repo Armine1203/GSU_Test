@@ -5,6 +5,7 @@ from .views import (
     get_groups_for_subject,
     results,
     Quiz,
+    QuestionAPIView,
 )
 
 urlpatterns = [
@@ -23,7 +24,7 @@ urlpatterns = [
 
     # API endpoints
     path('api/questions/', views.api_questions_list, name='api_questions_list'),
-    path('api/questions/<int:pk>/', views.api_question_detail, name='api_question_detail'),
+    path('api/questions/<int:pk>/', QuestionAPIView.as_view(), name='question-api'),
     path('api/groups/', get_groups_for_subject, name='get_groups'),
 
     # Exam management URLs

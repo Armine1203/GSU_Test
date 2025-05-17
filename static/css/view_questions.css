@@ -1,0 +1,47 @@
+.toast {
+    max-width: 350px;
+}
+
+.toast-header {
+    font-weight: bold;
+}
+
+.toast-body {
+    padding: 1rem;
+}
+
+#currentImagePreview {
+    max-width: 100%;
+    height: auto;
+}
+
+#loadingIndicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(255, 255, 255, 0.8);
+    z-index: 1050;
+}
+
+#currentImagePreview {
+    transition: transform 0.3s ease;
+  }
+
+#currentImagePreview:hover {
+    transform: scale(1.2);
+    cursor: pointer;
+  }
+
+.zoom-image {
+    transition: transform 0.4s ease, box-shadow 0.4s ease;
+    display: inline-block;
+    cursor: zoom-in;
+}
+
+.zoom-image:hover {
+    transform: scale(4);
+    z-index: 999;
+    position: relative;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    cursor: zoom-out;
+}

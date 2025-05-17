@@ -464,7 +464,7 @@ class DeleteQuestion(View):
 
             question.delete()
             messages.success(request, "Հարցը հաջողությամբ ջնջվել է ")
-            return redirect("view_questions", subject_id=question.subject.id)
+            return redirect("view_questions.html", subject_id=question.subject.id)
 
         except TestQuestion.DoesNotExist:
             messages.error(request, "Հարցը չի գտնվել")
@@ -855,19 +855,14 @@ def create_exam_with_random_questions(subject, group, due_date, time_limit, crea
         return exam
 
 
-
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
-
-@csrf_exempt  # Temporarily add this for testing, remove in production
+@login_required
 def get_question(request, question_id):
     try:
         question = TestQuestion.objects.get(id=question_id)
-        # Verify the requesting user owns this question
         if question.creator != request.user:
             return JsonResponse({'error': 'Permission denied'}, status=403)
 
-        return JsonResponse({
+        data = {
             'id': question.id,
             'question': question.question,
             'option1': question.option1,
@@ -875,12 +870,15 @@ def get_question(request, question_id):
             'option3': question.option3,
             'option4': question.option4,
             'correct_option': question.correct_option,
-            'score': question.score
-        })
+            'score': question.score,
+            'image': question.image.url if question.image else None
+        }
+        return JsonResponse(data)
     except TestQuestion.DoesNotExist:
         return JsonResponse({'error': 'Question not found'}, status=404)
 
-@csrf_exempt  # Temporarily add this for testing, remove in production
+
+@login_required
 def update_question(request):
     if request.method != 'POST':
         return JsonResponse({'error': 'Invalid request method'}, status=400)
@@ -891,8 +889,6 @@ def update_question(request):
             return JsonResponse({'error': 'Question ID is required'}, status=400)
 
         question = TestQuestion.objects.get(id=question_id)
-
-        # Verify the requesting user owns this question
         if question.creator != request.user:
             return JsonResponse({'error': 'Permission denied'}, status=403)
 
@@ -904,13 +900,21 @@ def update_question(request):
         question.option4 = request.POST.get('option4', question.option4)
         question.correct_option = request.POST.get('correct_option', question.correct_option)
         question.score = int(request.POST.get('score', question.score))
+
+        # Handle image upload
+        if 'image' in request.FILES:
+            question.image = request.FILES['image']
+        elif request.POST.get('remove_image') == 'true':
+            question.image.delete()
+
         question.save()
 
         return JsonResponse({'success': True})
-
     except TestQuestion.DoesNotExist:
         return JsonResponse({'error': 'Question not found'}, status=404)
     except Exception as e:
+        import traceback
+        print(traceback.format_exc())  # Log full traceback for debugging
         return JsonResponse({'error': str(e)}, status=500)
 
 
@@ -933,3 +937,121 @@ def feedback_view(request):
 def feedback_success(request):
     return render(request, 'feedback/feedback_success.html')
 
+
+from django.views.generic import View
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from django.utils.decorators import method_decorator
+
+
+# ... your existing imports ...
+
+@method_decorator(login_required, name='dispatch')
+class QuestionAPIView(View):
+    def get(self, request, pk):
+        try:
+            question = TestQuestion.objects.get(id=pk)
+            if question.creator != request.user:
+                return JsonResponse({'error': 'Permission denied'}, status=403)
+
+            data = {
+                'id': question.id,
+                'question': question.question,
+                'option1': question.option1,
+                'option2': question.option2,
+                'option3': question.option3,
+                'option4': question.option4,
+                'correct_option': question.correct_option,
+                'score': question.score,
+                'image': question.image.url if question.image else None
+            }
+            return JsonResponse(data)
+
+        except TestQuestion.DoesNotExist:
+            return JsonResponse({'error': 'Question not found'}, status=404)
+
+    def post(self, request, pk):
+        try:
+            question = TestQuestion.objects.get(id=pk)
+            if question.creator != request.user:
+                return JsonResponse({'error': 'Permission denied'}, status=403)
+
+            # Update fields
+            question.question = request.POST.get('question', question.question)
+            question.option1 = request.POST.get('option1', question.option1)
+            question.option2 = request.POST.get('option2', question.option2)
+            question.option3 = request.POST.get('option3', question.option3)
+            question.option4 = request.POST.get('option4', question.option4)
+            question.correct_option = request.POST.get('correct_option', question.correct_option)
+            question.score = int(request.POST.get('score', question.score))
+
+            # Handle image upload
+            if 'image' in request.FILES:
+                question.image = request.FILES['image']
+
+            question.save()
+
+            return JsonResponse({'success': True})
+
+        except TestQuestion.DoesNotExist:
+            return JsonResponse({'error': 'Question not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def get_question(request, question_id):
+    try:
+        question = TestQuestion.objects.get(id=question_id)
+        if question.creator != request.user:
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+
+        data = {
+            'id': question.id,
+            'question': question.question,
+            'option1': question.option1,
+            'option2': question.option2,
+            'option3': question.option3,
+            'option4': question.option4,
+            'correct_option': question.correct_option,
+            'score': question.score,
+            'image': question.image.url if question.image else None
+        }
+        return JsonResponse(data)
+    except TestQuestion.DoesNotExist:
+        return JsonResponse({'error': 'Question not found'}, status=404)
+
+
+@login_required
+def update_question(request):
+    if request.method == 'POST':
+        try:
+            question_id = request.POST.get('id')
+            if not question_id:
+                return JsonResponse({'error': 'Question ID is required'}, status=400)
+
+            question = TestQuestion.objects.get(id=question_id)
+            if question.creator != request.user:
+                return JsonResponse({'error': 'Permission denied'}, status=403)
+
+            # Update question fields
+            question.question = request.POST.get('question', question.question)
+            question.option1 = request.POST.get('option1', question.option1)
+            question.option2 = request.POST.get('option2', question.option2)
+            question.option3 = request.POST.get('option3', question.option3)
+            question.option4 = request.POST.get('option4', question.option4)
+            question.correct_option = request.POST.get('correct_option', question.correct_option)
+            question.score = int(request.POST.get('score', question.score))
+
+            # Handle image upload if needed
+            if 'image' in request.FILES:
+                question.image = request.FILES['image']
+
+            question.save()
+
+            return JsonResponse({'success': True})
+        except TestQuestion.DoesNotExist:
+            return JsonResponse({'error': 'Question not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
