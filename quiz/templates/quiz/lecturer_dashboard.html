@@ -221,7 +221,7 @@
                     <!-- Subject Field -->
                     <div class="mb-4">
                             <label class="form-label text-dark">Առարկա</label>
-                        <select class="form-select form-select-lg" name="{{ form.subject.name }}"
+                        <select id="id_subject" class="form-select form-select-lg" name="{{ form.subject.name }}"
                                 style="background-color: white; border: 1px solid #dee2e6; color: #212529;">
                             {% for value, label in form.subject.field.choices %}
                             <option value="{{ value }}" {% if form.subject.value == value %}selected{% endif %}>
@@ -325,6 +325,46 @@
         </div>
     </div>
 </div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script type="text/javascript">
+    
+    $(document).ready(function () {
+    $('#id_subject').on('change', function () {
+        const subjectId = $(this).val();
+        console.log('Subject changed:', subjectId);
+
+        $.ajax({
+            url: '/quiz/ajax/load-questions/',
+            data: {
+                'subject_id': subjectId
+            },
+            success: function (data) {
+                console.log('AJAX success, data received:', data);
+                const container = $('.question-checkboxes');
+                container.empty();  // մաքրում ենք հները
+
+                data.forEach(function (q) {
+                    const checkboxHtml = `
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox"
+                                   name="questions" value="${q.id}"
+                                   id="question_${q.id}" style="border: 1px solid #dee2e6;">
+                            <label class="form-check-label text-dark" for="question_${q.id}">
+                                ${q.question}
+                            </label>
+                        </div>`;
+                    container.append(checkboxHtml);
+                });
+            },
+            error: function (xhr, status, error) {
+                console.error('AJAX error:', status, error);
+            }
+        });
+    });
+});
+
+</script>
 <!-- Add this JavaScript at the end of your modal -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -721,4 +761,8 @@
                     });
             });
         });
+
+
+
+
 </script>

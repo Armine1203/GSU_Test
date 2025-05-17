@@ -9,7 +9,7 @@ from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.views import View
 from .forms import SubjectForm, MidtermExamForm
-from .models import TestQuestion, Lecturer, Subject, Group, StudentAnswer, ExamResult, Mark, MidtermExam, Student
+from .models import TestQuestion, Lecturer, Subject, Group, StudentAnswer, ExamResult, Mark, MidtermExam, Student, LiveStudentExam
 from django.contrib import messages
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
@@ -31,7 +31,7 @@ class Quiz(View):
 
         if exam_id:
             try:
-                exam = MidtermExam.objects.get(id=exam_id)
+                exam = LiveStudentExam.objects.get(id=exam_id)
                 # Check if student already attempted this exam
                 if Mark.objects.filter(user=request.user, exam=exam).exists():
                     messages.error(request, "Դուք արդեն անցել եք այս քննությունը")
@@ -742,14 +742,20 @@ def exam_detail_view(request, exam_id):
 def create_exam(request):
     if request.method == 'POST':
         form = MidtermExamForm(request.POST, user=request.user)
+        print("Apppppppp[per I am working fine Invalid]")
+        print(form.errors)
+
         if form.is_valid():
+            print("Apppppppp[per I am working fine]")
             exam = form.save(commit=False)
             exam.created_by = request.user
 
             use_random = form.cleaned_data.get('use_random', False)
 
             if use_random:
+                print("Not Use Random working")
                 try:
+
                     questions_per_student = form.cleaned_data['questions_per_student']
                     subject = form.cleaned_data['subject']
 
@@ -767,20 +773,30 @@ def create_exam(request):
                     # For each student in the group, create a personalized set of questions
                     students = exam.group.student_set.all()
                     for student in students:
+                        print(student)
                         # Select random questions
                         selected_questions = random.sample(all_questions, questions_per_student)
 
+                        live_exam = LiveStudentExam(student = student, exam=exam)
+                        live_exam.save()
+                        live_exam.questions.set(selected_questions)
+
                         # Create a personalized exam result with these questions
-                        exam_result = ExamResult.objects.create(
-                            exam=exam,
-                            student=student
-                        )
-                        exam_result.questions.set(selected_questions)
+                        #exam_result = ExamResult.objects.create(
+                        #    exam=live_exam,
+                        #    student=student
+                        #)
+                        #exam_result.save()
+                        #exam_result.questions.set(selected_questions)
+                        print("asdf" + live_exam)
+                        
+                        live_exam.save()
 
                     messages.success(request, f"Exam created with {questions_per_student} random questions per student")
                     return redirect('lecturer_dashboard')
 
                 except Exception as e:
+                    print (e)
                     form.add_error(None, str(e))
                     return render(request, 'quiz/exam_form.html', {'form': form})
 
@@ -1055,3 +1071,9 @@ def update_question(request):
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+
+def load_questions(request):
+    subject_id = request.GET.get('subject_id')
+    questions = TestQuestion.objects.filter(subject_id=subject_id).values('id', 'question')
+    return JsonResponse(list(questions), safe=False)

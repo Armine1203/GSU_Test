@@ -1,5 +1,5 @@
 from django import forms
-from .models import Subject, Major, MidtermExam, Group,Feedback
+from .models import Subject, Major, MidtermExam, Group,Feedback, TestQuestion
 
 
 class SubjectForm(forms.ModelForm):
@@ -52,14 +52,23 @@ class MidtermExamForm(forms.ModelForm):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
 
-        if user is not None:
-            self.fields['subject'].queryset = Subject.objects.filter(lecturers=user)
-            self.fields['group'].queryset = Group.objects.filter(
-                major__in=self.fields['subject'].queryset.values('major')
-            )
-
-        # Make questions field not required since we might use random selection
-        self.fields['questions'].required = False
+        # 1. Ստուգում ենք subject-ի արժեքը՝ ամենավերընթարկումից
+        subject_id = None
+        
+        # self.data է POST կամ GET տվյալները, եթե ձևը նայվում է POST-ով
+        if self.data.get('subject'):
+            subject_id = self.data.get('subject')
+        # fallback, եթե initial-ում կա կամ instance-ից
+        elif self.initial.get('subject'):
+            subject_id = self.initial.get('subject')
+        elif self.instance and self.instance.pk:
+            subject_id = self.instance.subject_id
+        
+        # 2. Եթե subject_id կա, ապա ֆիլտրում ենք հարցերը ըստ դրա
+        if subject_id:
+            self.fields['questions'].queryset = TestQuestion.objects.filter(subject_id=subject_id)
+        else:
+            self.fields['questions'].queryset = TestQuestion.objects.none()
 
     def clean(self):
         cleaned_data = super().clean()

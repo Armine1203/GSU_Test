@@ -1,0 +1,112 @@
+{% extends 'layout.html' %}
+
+{% block title %}Create Exam{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Create New Exam</h2>
+    
+    {% if form.errors %}
+        <div class="alert alert-danger">
+            Please correct the errors below.
+        </div>
+    {% endif %}
+    
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="card mb-4">
+            <div class="card-body">
+                <!-- Subject Field -->
+                <div class="mb-3">
+                    <label class="form-label">Subject</label>
+                    {{ form.subject }}
+                    {% if form.subject.errors %}
+                        <div class="text-danger">{{ form.subject.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <!-- Group Field -->
+                <div class="mb-3">
+                    <label class="form-label">Group</label>
+                    {{ form.group }}
+                    {% if form.group.errors %}
+                        <div class="text-danger">{{ form.group.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <!-- Due Date and Time Limit -->
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Due Date</label>
+                        {{ form.due_date }}
+                        {% if form.due_date.errors %}
+                            <div class="text-danger">{{ form.due_date.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Time Limit (minutes)</label>
+                        {{ form.time_limit }}
+                        {% if form.time_limit.errors %}
+                            <div class="text-danger">{{ form.time_limit.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Questions Section -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="form-check form-switch">
+                        {{ form.use_random }}
+                        <label class="form-check-label" for="{{ form.use_random.id_for_label }}">
+                            Use random question selection
+                        </label>
+                    </div>
+                </div>
+                
+                <div id="randomOptions" {% if not form.use_random.value %}style="display: none;"{% endif %}>
+                    <label class="form-label">Questions per student</label>
+                    <input type="number" class="form-control" name="questions_per_student" 
+                           value="{{ form.questions_per_student.value|default:'10' }}" min="1">
+                </div>
+                
+                <div id="manualQuestions" {% if form.use_random.value %}style="display: none;"{% endif %}>
+                    <label class="form-label">Select Questions</label>
+                    <div class="question-list" style="max-height: 300px; overflow-y: auto;">
+                        {{ form.questions }}
+                    </div>
+                    {% if form.questions.errors %}
+                        <div class="text-danger">{{ form.questions.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <button type="submit" class="btn btn-primary">Create Exam</button>
+        <a href="{% url 'lecturer_dashboard' %}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const useRandomSwitch = document.getElementById('{{ form.use_random.id_for_label }}');
+    const randomOptions = document.getElementById('randomOptions');
+    const manualQuestions = document.getElementById('manualQuestions');
+    
+    if (useRandomSwitch) {
+        useRandomSwitch.addEventListener('change', function() {
+            if (this.checked) {
+                randomOptions.style.display = 'block';
+                manualQuestions.style.display = 'none';
+            } else {
+                randomOptions.style.display = 'none';
+                manualQuestions.style.display = 'block';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

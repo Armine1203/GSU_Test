@@ -85,7 +85,7 @@ class MidtermExamAdmin(admin.ModelAdmin):
 
 class ExamResultAdmin(admin.ModelAdmin):
     list_display = ('student', 'exam', 'score', 'percentage_display', 'completed_at')
-    list_filter = ('exam__subject', 'exam__group', 'completed_at')
+    #list_filter = ('exam__subject', 'exam__group', 'completed_at')
     search_fields = ('student__user__username', 'student__name', 'student__last_name')
     readonly_fields = ('percentage_display',)
     date_hierarchy = 'completed_at'
@@ -102,6 +102,8 @@ class FeedbackAdmin(admin.ModelAdmin):
     list_filter = ('feedback_type', 'resolved')
     search_fields = ('subject', 'message', 'name')
 
+class LiveStudentExamAdmin(admin.ModelAdmin):
+    list_display = ('subject', 'group', 'due_date', 'time_limit', )
 #admin.site.register(User, CustomUserAdmin)
 admin.site.register(Faculty, FacultyAdmin)
 admin.site.register(Department, DepartmentAdmin)
@@ -113,3 +115,4 @@ admin.site.register(Subject, SubjectAdmin)
 admin.site.register(TestQuestion, TestQuestionAdmin)
 admin.site.register(MidtermExam, MidtermExamAdmin)
 admin.site.register(ExamResult, ExamResultAdmin)
+admin.site.register(LiveStudentExam, LiveStudentExamAdmin)

@@ -113,6 +113,48 @@ class MidtermExam(models.Model):
         return self.questions.all()
 
 
+class LiveStudentExam (models.Model):
+
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    exam = models.ForeignKey(MidtermExam, on_delete = models.CASCADE)
+    questions = models.ManyToManyField(TestQuestion)
+
+    def __str__(self):
+        return f"{self.exam.subject} - {self.exam.group} (Due: {self.exam.due_date})"
+
+    @property
+    def subject(self):
+        return self.exam.subject
+
+    @property
+    def group(self):
+        return self.exam.group
+
+    @property
+    def due_date(self):
+        return self.exam.due_date
+
+    @property
+    def time_limit(self):
+        return self.exam.time_limit
+
+    @property
+    def created_by(self):
+        return self.exam.created_by
+
+    @property
+    def number_of_tests(self):
+        return self.exam.number_of_tests()
+
+    @property
+    def is_random(self):
+        return self.exam.is_random
+
+    def get_questions_for_student(self):
+        # Assuming LiveStudentExam.questions is used instead of exam.questions
+        return self.questions.all()
+
+
 class Mark(models.Model):
     total = models.IntegerField()
     got = models.IntegerField()
@@ -147,7 +189,7 @@ class StudentAnswer(models.Model):
 
 
 class ExamResult(models.Model):
-    exam = models.ForeignKey(MidtermExam, on_delete=models.CASCADE)
+    exam = models.ForeignKey(LiveStudentExam, on_delete=models.CASCADE)
     student = models.ForeignKey(Student, on_delete=models.CASCADE)
     score = models.IntegerField(default=0)
     completed_at = models.DateTimeField(auto_now_add=True)

@@ -39,6 +39,8 @@ urlpatterns = [
     path('results/<int:result_id>/', views.result_detail, name='result_detail'),  # Detailed view of a specific result
 
     #feedback
-path('feedback/', views.feedback_view, name='feedback_form'),
+    path('feedback/', views.feedback_view, name='feedback_form'),
     path('feedback/success/', views.feedback_success, name='feedback_success'),
+    path('ajax/load-questions/', views.load_questions, name='ajax_load_questions'),
+
 ]
