@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from .models import *
 from django.contrib import admin
 from .models import Feedback
+from django.contrib.contenttypes.models import ContentType
 
 # Unregister the default User admin if needed
 from django.contrib.auth import get_user_model
@@ -82,19 +83,29 @@ class MidtermExamAdmin(admin.ModelAdmin):
 
     questions_count.short_description = 'Questions'
 
-
 class ExamResultAdmin(admin.ModelAdmin):
-    list_display = ('student', 'exam', 'score', 'percentage_display', 'completed_at')
-    #list_filter = ('exam__subject', 'exam__group', 'completed_at')
+    list_display = ('student', 'exam_display', 'score', 'percentage_display', 'completed_at')
+    list_filter = ('content_type', 'completed_at')
     search_fields = ('student__user__username', 'student__name', 'student__last_name')
-    readonly_fields = ('percentage_display',)
+    readonly_fields = ('percentage_display', 'exam_display')
     date_hierarchy = 'completed_at'
-    raw_id_fields = ('student', 'exam')
+    raw_id_fields = ('student',)
+    list_select_related = ('student', 'content_type')
 
     def percentage_display(self, obj):
         return f"{obj.percentage}%"
-
     percentage_display.short_description = 'Score %'
+
+    def exam_display(self, obj):
+        # Display the exam with its type
+        if obj.exam:
+            return f"{obj.content_type.name}: {str(obj.exam)}"
+        return "No exam"
+    exam_display.short_description = 'Exam'
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('student', 'content_type')
 
 @admin.register(Feedback)
 class FeedbackAdmin(admin.ModelAdmin):

@@ -1,8 +1,9 @@
 import json
 import random
+
+from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from .models import TestQuestion, MidtermExam, ExamResult, StudentAnswer, Mark
-
 from django.db import models
 from django.db.models import Prefetch, Avg, Count, F, Sum, Exists, OuterRef, When, Case, BooleanField
 from django.shortcuts import render, redirect
@@ -21,6 +22,11 @@ from django.views.generic import View
 from docx import Document
 from django.views.decorators.csrf import csrf_exempt
 from .forms import FeedbackForm
+from django.views.generic import View
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from django.utils.decorators import method_decorator
+
 
 
 # Create your views here.
@@ -31,18 +37,31 @@ class Quiz(View):
 
         if exam_id:
             try:
-                exam = LiveStudentExam.objects.get(id=exam_id)
+                midterm_exam = get_object_or_404(MidtermExam, id=exam_id)
+
                 # Check if student already attempted this exam
-                if Mark.objects.filter(user=request.user, exam=exam).exists():
+                if Mark.objects.filter(user=request.user, exam=midterm_exam).exists():
                     messages.error(request, "Դուք արդեն անցել եք այս քննությունը")
                     return redirect("student_dashboard")
 
-                questions = exam.questions.all()
+                # Try to get LiveStudentExam if it exists
+                try:
+                    live_exam = LiveStudentExam.objects.get(
+                        exam=midterm_exam,
+                        student=request.user.student
+                    )
+                    questions = live_exam.questions.all()
+                    time_limit = live_exam.time_limit
+                except LiveStudentExam.DoesNotExist:
+                    # Fall back to MidtermExam questions if no LiveStudentExam exists
+                    questions = midterm_exam.questions.all()
+                    time_limit = midterm_exam.time_limit
+
                 return render(request, "quiz/quiz.html", {
                     "questions": questions,
-                    "time_limit": exam.time_limit * 60,
+                    "time_limit": time_limit * 60,
                     "start_time": timezone.now().isoformat(),
-                    "exam": exam  # Make sure to pass the exam object
+                    "exam": midterm_exam
                 })
 
             except MidtermExam.DoesNotExist:
@@ -55,57 +74,57 @@ class Quiz(View):
     def post(self, request):
         exam_id = request.POST.get('exam_id')
         try:
-            exam = MidtermExam.objects.get(id=exam_id)
+            # First try to get as LiveStudentExam
+            try:
+                exam = LiveStudentExam.objects.get(id=exam_id, student=request.user.student)
+                exam_for_result = exam
+            except LiveStudentExam.DoesNotExist:
+                # Fall back to MidtermExam
+                exam_for_result = MidtermExam.objects.get(id=exam_id)
 
-            # Check if already taken
-            if Mark.objects.filter(user=request.user, exam=exam).exists():
+            if Mark.objects.filter(user=request.user, exam=exam_for_result).exists():
                 messages.error(request, "You have already taken this exam")
                 return redirect("student_dashboard")
 
-            # Calculate score and prepare answers
             correct = 0
             student_answers = []
+            questions = exam_for_result.questions.all()
 
-            for i in range(1, exam.questions.count() + 1):
-                user_answer = request.POST.get(f'q{i}o')
-                try:
-                    question = exam.questions.get(id=request.POST.get(f'q{i}'))
-                    is_correct = user_answer == question.correct_option
-                    if is_correct:
-                        correct += 1
-
-                    # Create StudentAnswer instance
-                    answer = StudentAnswer.objects.create(
-                        question=question,
-                        answer=user_answer,
-                        is_correct=is_correct
-                    )
-                    student_answers.append(answer)
-
-                except (TestQuestion.DoesNotExist, ValueError):
+            for i, question in enumerate(questions, start=1):
+                user_answer = request.POST.get(f'q{question.id}o')
+                if not user_answer:
                     continue
 
-            # Create Mark
+                is_correct = user_answer == question.correct_option
+                if is_correct:
+                    correct += 1
+
+                answer = StudentAnswer.objects.create(
+                    question=question,
+                    answer=user_answer,
+                    is_correct=is_correct
+                )
+                student_answers.append(answer)
+
+            # Create mark
             mark = Mark.objects.create(
                 user=request.user,
-                exam=exam,
-                total=exam.questions.count(),
+                exam=exam_for_result,
+                total=len(questions),
                 got=correct
             )
 
-            # Create ExamResult
+            # Create exam result
             exam_result = ExamResult.objects.create(
-                exam=exam,
+                exam=exam_for_result,
                 student=request.user.student,
                 score=correct
             )
-
-            # Add answers to the ExamResult
             exam_result.answers.set(student_answers)
 
             return redirect("result_detail", result_id=mark.id)
 
-        except MidtermExam.DoesNotExist:
+        except (MidtermExam.DoesNotExist, LiveStudentExam.DoesNotExist):
             messages.error(request, "Exam not found")
             return redirect("student_dashboard")
 
@@ -113,15 +132,17 @@ class Quiz(View):
 class AddQuestion(View):
     def get(self, request):
         if not hasattr(request.user, 'lecturer'):
-            messages.error(request, "Only lecturers can add questions")
+            messages.error(request, "Միայն դասախոսները կարող են հարցեր ավելացնել")
             return redirect("index")
 
         # Get parameters with defaults
+
+        # հարցե8ի քանակը կարող ենք փոխել
         try:
-            question_count = int(request.GET.get('count', 10))
-            question_count = max(1, min(50, question_count))  # Limit between 1-50
+            question_count = int(request.GET.get('count', 2))
+            question_count = max(1, min(100, question_count))  # Limit between 1-100
         except ValueError:
-            question_count = 10
+            question_count = 2
 
         subject_id = request.GET.get('subject')
         lecturer = request.user.lecturer
@@ -241,26 +262,27 @@ class Leaderboard(View):
     def get(self, request):
         try:
             if hasattr(request.user, 'student'):
-                    # Student view (same as before)
-                    student = request.user.student
-                    current_group = student.group
-                    group_exams = MidtermExam.objects.filter(
-                        group=current_group
-                    ).select_related('subject').order_by('-due_date')
+                student = request.user.student
+                current_group = student.group
 
-                    exam_results = ExamResult.objects.filter(
-                        exam__group=current_group
-                    ).select_related('student', 'exam')
+                group_exams = MidtermExam.objects.filter(
+                    group=current_group
+                ).select_related('subject').order_by('-due_date')
 
-                    context = {
-                        'user_type': 'student',
-                        'current_group': current_group,
-                        'group_exams': group_exams,
-                        'exam_results': exam_results,
-                    }
+                exam_ct = ContentType.objects.get_for_model(MidtermExam)
+                exam_results = ExamResult.objects.filter(
+                    content_type=exam_ct,
+                    object_id__in=group_exams.values_list('id', flat=True)
+                ).select_related('student')
+
+                context = {
+                    'user_type': 'student',
+                    'current_group': current_group,
+                    'group_exams': group_exams,
+                    'exam_results': exam_results,
+                }
 
             elif hasattr(request.user, 'lecturer'):
-                # Lecturer view
                 lecturer = request.user.lecturer
                 subjects = lecturer.subjects.all()
                 groups = Group.objects.filter(
@@ -275,16 +297,18 @@ class Leaderboard(View):
 
                 if selected_group_id:
                     selected_group = get_object_or_404(Group, id=selected_group_id)
+
                     group_exams = MidtermExam.objects.filter(
                         group=selected_group,
                         subject__in=subjects
                     ).select_related('subject').order_by('-due_date')
 
+                    exam_ct = ContentType.objects.get_for_model(MidtermExam)
                     exam_results = ExamResult.objects.filter(
-                        exam__in=group_exams
-                    ).select_related('student', 'exam')
+                        content_type=exam_ct,
+                        object_id__in=group_exams.values_list('id', flat=True)
+                    ).select_related('student')
 
-                    # Handle export request
                     if export_format in ['word', 'excel']:
                         return self.export_results(selected_group, group_exams, exam_results, export_format)
 
@@ -464,12 +488,11 @@ class DeleteQuestion(View):
 
             question.delete()
             messages.success(request, "Հարցը հաջողությամբ ջնջվել է ")
-            return redirect("view_questions.html", subject_id=question.subject.id)
+            return redirect("view_questions", subject_id=question.subject.id)
 
         except TestQuestion.DoesNotExist:
             messages.error(request, "Հարցը չի գտնվել")
             return redirect("lecturer_dashboard")
-
 
 @method_decorator(login_required, name="dispatch")
 class AddSubject(View):
@@ -490,7 +513,6 @@ class AddSubject(View):
             messages.success(request, "Առարկան հաջողությամբ ավելացվել է")
             return redirect('lecturer_dashboard')
         return render(request, "quiz/add_subject.html", {'form': form})
-
 
 @method_decorator(login_required, name="dispatch")
 class SelectQuestionCount(View):
@@ -529,7 +551,6 @@ class SelectQuestionCount(View):
         return redirect(f"{reverse('add_question')}?count={question_count}&subject={subject_id}")
 
 # API Views
-
 
 def api_questions_list(request):
     if not request.user.is_authenticated or not hasattr(request.user, 'lecturer'):
@@ -603,19 +624,37 @@ def results(request):
         return HttpResponseForbidden("Դուք չունեք այս էջը տեսնելու թույլտվություն")
 
     exam_id = request.GET.get('exam_id')
+    student = request.user.student
 
     if exam_id:
-        # Show specific exam results
+        # Show   exam results
         try:
-            exam = MidtermExam.objects.get(id=exam_id)
-            result = ExamResult.objects.get(exam=exam, student=request.user.student)
-            return redirect('result_detail', result_id=result.id)
-        except (MidtermExam.DoesNotExist, ExamResult.DoesNotExist):
-            messages.error(request, "Results not found for this exam")
+            # Try to find through LiveStudentExam first
+            try:
+                live_exam = LiveStudentExam.objects.get(exam_id=exam_id, student=student)
+                result = ExamResult.objects.filter(
+                    content_type=ContentType.objects.get_for_model(live_exam),
+                    object_id=live_exam.id,
+                    student=student
+                ).first()
+            except LiveStudentExam.DoesNotExist:
+                # Fall back to MidtermExam
+                result = ExamResult.objects.filter(
+                    content_type=ContentType.objects.get_for_model(MidtermExam),
+                    object_id=exam_id,
+                    student=student
+                ).first()
+
+            if result:
+                return redirect('result_detail', result_id=result.id)
+
+            messages.error(request, "Այս քննության համար արդյունքներ չեն գտնվել")
+            return redirect('student_dashboard')
+        except Exception as e:
+            messages.error(request, f"Error: {str(e)}")
             return redirect('student_dashboard')
 
-    # Show all results
-    student = request.user.student
+    # Rest of your existing results view code...
     marks = Mark.objects.filter(user=request.user).select_related('exam')
     exam_results = ExamResult.objects.filter(student=student).select_related('exam')
 
@@ -634,59 +673,74 @@ def results(request):
     }
     return render(request, 'quiz/results.html', context)
 
-
 @login_required
 def result_detail(request, result_id):
-    # Get the result with all related data
-    result = get_object_or_404(
-        ExamResult.objects.select_related('exam', 'student')
-                         .prefetch_related('answers__question'),
-        id=result_id,
-        student__user=request.user
-    )
+    try:
+        # Get the mark
+        mark = get_object_or_404(Mark, id=result_id, user=request.user)
 
-    # Calculate actual points earned (sum of scores for correct answers)
-    points_earned = sum(
-        answer.question.score
-        for answer in result.answers.all()
-        if answer.is_correct
-    )
+        # Find the exam result using GenericRelation
+        exam_result = None
 
-    # Calculate total possible points
-    total_possible_points = sum(
-        answer.question.score
-        for answer in result.answers.all()
-    )
+        # Try to find through LiveStudentExam first
+        try:
+            live_exam = LiveStudentExam.objects.get(exam=mark.exam, student=request.user.student)
+            exam_result = ExamResult.objects.filter(
+                content_type=ContentType.objects.get_for_model(live_exam),
+                object_id=live_exam.id,
+                student=request.user.student
+            ).first()
+        except LiveStudentExam.DoesNotExist:
+            pass
 
-    # Prepare questions data
-    questions = []
-    for answer in result.answers.all():
-        questions.append({
-            'question': answer.question,
-            'student_answer': answer.answer,
-            'correct_answer': answer.question.correct_option,
-            'is_correct': answer.is_correct,
-            'score': answer.question.score,
-            'options': {
-                'A': answer.question.option1,
-                'B': answer.question.option2,
-                'C': answer.question.option3,
-                'D': answer.question.option4,
-            }
-        })
+        # If not found, try through MidtermExam
+        if not exam_result:
+            exam_result = ExamResult.objects.filter(
+                content_type=ContentType.objects.get_for_model(mark.exam),
+                object_id=mark.exam.id,
+                student=request.user.student
+            ).first()
 
-    context = {
-        'result': result,
-        'exam': result.exam,
-        'questions': questions,
-        'correct_answers_count': result.score,  # Number of correct answers
-        'total_questions': result.total_questions,  # Total number of questions
-        'points_earned': points_earned,  # Total points earned
-        'total_possible_points': total_possible_points,  # Max possible points
-        'percentage': round((points_earned / total_possible_points) * 100, 2) if total_possible_points > 0 else 0,
-    }
-    return render(request, "quiz/result_detail.html", context)
+        if not exam_result:
+            messages.error(request, "Results not found for this exam")
+            return redirect('results')
 
+        # Rest of your view logic...
+        points_earned = sum(
+            answer.question.score
+            for answer in exam_result.answers.all()
+            if answer.is_correct
+        )
+        total_possible_points = sum(
+            answer.question.score
+            for answer in exam_result.answers.all()
+        )
+
+        context = {
+            'result': exam_result,
+            'mark': mark,
+            'questions': [{
+                'question': answer.question,
+                'student_answer': answer.answer,
+                'correct_answer': answer.question.correct_option,
+                'is_correct': answer.is_correct,
+                'score': answer.question.score,
+                'options': {
+                    'A': answer.question.option1,
+                    'B': answer.question.option2,
+                    'C': answer.question.option3,
+                    'D': answer.question.option4,
+                }
+            } for answer in exam_result.answers.all()],
+            'points_earned': points_earned,
+            'total_possible_points': total_possible_points,
+            'percentage': round((points_earned / total_possible_points) * 100, 2) if total_possible_points > 0 else 0,
+        }
+        return render(request, "quiz/result_detail.html", context)
+
+    except Exception as e:
+        messages.error(request, f"Error accessing results: {str(e)}")
+        return redirect('results')
 
 # views.py - Example of how to save exam results
 def submit_exam(request, exam_id):
@@ -737,7 +791,6 @@ def exam_detail_view(request, exam_id):
     exam = get_object_or_404(MidtermExam, id=exam_id)
     return render(request, 'exams/exam_detail.html', {'exam': exam})
 
-
 @login_required
 def create_exam(request):
     if request.method == 'POST':
@@ -749,64 +802,78 @@ def create_exam(request):
             print("Apppppppp[per I am working fine]")
             exam = form.save(commit=False)
             exam.created_by = request.user
+            exam.save()  # Save exam first to get an ID
+            print(f"Exam saved with ID: {exam.id}")
 
             use_random = form.cleaned_data.get('use_random', False)
+            print(f"Use random questions: {use_random}")
 
             if use_random:
-                print("Not Use Random working")
+                print("Random exam workflow starting")
                 try:
-
                     questions_per_student = form.cleaned_data['questions_per_student']
                     subject = form.cleaned_data['subject']
+                    group = form.cleaned_data['group']
+                    print(f"Creating exam with {questions_per_student} questions per student")
 
                     # Get all questions for the subject
                     all_questions = list(TestQuestion.objects.filter(subject=subject))
+                    print(f"Found {len(all_questions)} questions in the pool")
 
                     if len(all_questions) < questions_per_student:
-                        form.add_error(None,
-                                       f"Not enough questions available. Need {questions_per_student}, have {len(all_questions)}")
+                        error_msg = f"Not enough questions available. Need {questions_per_student}, have {len(all_questions)}"
+                        print(error_msg)
+                        form.add_error(None, error_msg)
                         return render(request, 'quiz/exam_form.html', {'form': form})
 
-                    # Save exam first without questions
-                    exam.save()
-
                     # For each student in the group, create a personalized set of questions
-                    students = exam.group.student_set.all()
-                    for student in students:
-                        print(student)
-                        # Select random questions
-                        selected_questions = random.sample(all_questions, questions_per_student)
+                    students = group.student_set.all()
+                    print(f"Creating exams for {students.count()} students")
 
-                        live_exam = LiveStudentExam(student = student, exam=exam)
+                    for student in students:
+                        print(f"Processing student: {student}")
+                        selected_questions = random.sample(all_questions, questions_per_student)
+                        print(f"Selected questions: {[q.id for q in selected_questions]}")
+
+                        live_exam = LiveStudentExam(student=student, exam=exam)
                         live_exam.save()
                         live_exam.questions.set(selected_questions)
+                        print(f"Created LiveStudentExam {live_exam.id} for student {student.id}")
 
-                        # Create a personalized exam result with these questions
-                        #exam_result = ExamResult.objects.create(
-                        #    exam=live_exam,
-                        #    student=student
-                        #)
-                        #exam_result.save()
-                        #exam_result.questions.set(selected_questions)
-                        print("asdf" + live_exam)
-                        
-                        live_exam.save()
-
-                    messages.success(request, f"Exam created with {questions_per_student} random questions per student")
+                    success_msg = f"Exam created with {questions_per_student} random questions per student"
+                    print(success_msg)
+                    messages.success(request, success_msg)
                     return redirect('lecturer_dashboard')
 
                 except Exception as e:
-                    print (e)
-                    form.add_error(None, str(e))
+                    error_msg = f"Error in random exam creation: {str(e)}"
+                    print(error_msg)
+                    form.add_error(None, error_msg)
                     return render(request, 'quiz/exam_form.html', {'form': form})
 
             else:
-                # Manual selection
-                exam.save()
-                form.save_m2m()  # Save the many-to-many data (questions)
-                messages.success(request, "Exam created successfully")
+                print("Manual exam workflow starting")
+                # Manual selection - save the selected questions
+                form.save_m2m()
+                print(f"Saved {exam.questions.count()} manually selected questions")
+
+                # Create LiveStudentExam for each student with all questions
+                students = exam.group.student_set.all()
+                print(f"Creating exams for {students.count()} students")
+
+                for student in students:
+                    print(f"Processing student: {student}")
+                    live_exam = LiveStudentExam(student=student, exam=exam)
+                    live_exam.save()
+                    live_exam.questions.set(exam.questions.all())
+                    print(f"Created LiveStudentExam {live_exam.id} for student {student.id}")
+
+                success_msg = "Քննությունը հաջողությամբ ստեղծվել է։ Այն կարող եք տեսնել Իմ ստեղծած քննությունները բաժնում"
+                print(success_msg)
+                messages.success(request, success_msg)
                 return redirect('lecturer_dashboard')
     else:
+        print("Initial form load")
         form = MidtermExamForm(user=request.user)
 
     return render(request, 'quiz/exam_form.html', {'form': form})
@@ -870,7 +937,6 @@ def create_exam_with_random_questions(subject, group, due_date, time_limit, crea
 
         return exam
 
-
 @login_required
 def get_question(request, question_id):
     try:
@@ -892,7 +958,6 @@ def get_question(request, question_id):
         return JsonResponse(data)
     except TestQuestion.DoesNotExist:
         return JsonResponse({'error': 'Question not found'}, status=404)
-
 
 @login_required
 def update_question(request):
@@ -933,7 +998,6 @@ def update_question(request):
         print(traceback.format_exc())  # Log full traceback for debugging
         return JsonResponse({'error': str(e)}, status=500)
 
-
 def feedback_view(request):
     if request.method == 'POST':
         form = FeedbackForm(request.POST)
@@ -949,18 +1013,8 @@ def feedback_view(request):
 
     return render(request, 'feedback/feedback_form.html', {'form': form})
 
-
 def feedback_success(request):
     return render(request, 'feedback/feedback_success.html')
-
-
-from django.views.generic import View
-from django.http import JsonResponse
-from django.contrib.auth.decorators import login_required
-from django.utils.decorators import method_decorator
-
-
-# ... your existing imports ...
 
 @method_decorator(login_required, name='dispatch')
 class QuestionAPIView(View):
@@ -1014,7 +1068,6 @@ class QuestionAPIView(View):
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
 
-
 @login_required
 def get_question(request, question_id):
     try:
@@ -1036,7 +1089,6 @@ def get_question(request, question_id):
         return JsonResponse(data)
     except TestQuestion.DoesNotExist:
         return JsonResponse({'error': 'Question not found'}, status=404)
-
 
 @login_required
 def update_question(request):
@@ -1071,7 +1123,6 @@ def update_question(request):
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Invalid request method'}, status=400)
-
 
 def load_questions(request):
     subject_id = request.GET.get('subject_id')

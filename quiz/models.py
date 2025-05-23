@@ -2,6 +2,8 @@ from django.db import models
 from django.utils import timezone
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
+from django.contrib.contenttypes.models import ContentType
 
 class Faculty(models.Model):
     name = models.CharField(max_length=100)
@@ -86,6 +88,7 @@ class MidtermExam(models.Model):
     questions = models.ManyToManyField(TestQuestion)
     due_date = models.DateTimeField()
     time_limit = models.IntegerField(default=40)  # in minutes
+    exam_results = GenericRelation('ExamResult', related_query_name='midterm_exam')
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -112,12 +115,13 @@ class MidtermExam(models.Model):
                 return TestQuestion.objects.none()
         return self.questions.all()
 
-
 class LiveStudentExam (models.Model):
 
     student = models.ForeignKey(Student, on_delete=models.CASCADE)
     exam = models.ForeignKey(MidtermExam, on_delete = models.CASCADE)
     questions = models.ManyToManyField(TestQuestion)
+    exam_results = GenericRelation('ExamResult', related_query_name='live_exam')
+
 
     def __str__(self):
         return f"{self.exam.subject} - {self.exam.group} (Due: {self.exam.due_date})"
@@ -154,7 +158,6 @@ class LiveStudentExam (models.Model):
         # Assuming LiveStudentExam.questions is used instead of exam.questions
         return self.questions.all()
 
-
 class Mark(models.Model):
     total = models.IntegerField()
     got = models.IntegerField()
@@ -178,7 +181,6 @@ class Mark(models.Model):
     def __str__(self):
         return f"Mark({self.got}/{self.total}, {self.user})"
 
-
 class StudentAnswer(models.Model):
     question = models.ForeignKey(TestQuestion, on_delete=models.CASCADE)
     answer = models.CharField(max_length=1, choices=[('A', 'A'), ('B', 'B'), ('C', 'C'), ('D', 'D')])
@@ -187,9 +189,11 @@ class StudentAnswer(models.Model):
     def __str__(self):
         return f"{self.question}: {self.answer} ({'Correct' if self.is_correct else 'Incorrect'})"
 
-
 class ExamResult(models.Model):
-    exam = models.ForeignKey(LiveStudentExam, on_delete=models.CASCADE)
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True)
+    object_id = models.PositiveIntegerField(null=True, blank=True)
+    exam = GenericForeignKey('content_type', 'object_id')
+
     student = models.ForeignKey(Student, on_delete=models.CASCADE)
     score = models.IntegerField(default=0)
     completed_at = models.DateTimeField(auto_now_add=True)
@@ -197,7 +201,9 @@ class ExamResult(models.Model):
 
     @property
     def total_questions(self):
-        return self.exam.questions.count()
+        if hasattr(self.exam, 'questions'):
+            return self.exam.questions.count()
+        return 0
 
     @property
     def percentage(self):
@@ -207,7 +213,6 @@ class ExamResult(models.Model):
 
     def __str__(self):
         return f"{self.student} - {self.exam} ({self.score}/{self.total_questions})"
-
 
 class Feedback(models.Model):
     FEEDBACK_TYPES = [
