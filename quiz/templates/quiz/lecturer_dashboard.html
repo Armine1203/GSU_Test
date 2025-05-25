@@ -2,7 +2,6 @@
 
 {% block title %}Դասախոսի վահանակ{% endblock %}
 {% block body %}
-
 <div class="container mt-5 mb-5" style="background-color: #f8f9fa; padding: 20px; border-radius: 10px;">
     <!-- Header Section -->
     <div class="row">
@@ -107,11 +106,70 @@
                                 <i class="bi bi-plus-lg me-1"></i> Ավելացնել առարկա
                             </a>
                         </div>
+                        <!-- In the quick actions row, add this button -->
+                        <div class="col-12 col-sm-6 col-lg-3">
+                            <button class="btn btn-outline-warning btn-lg w-100 btn-fit-text"
+                                    data-bs-toggle="modal" data-bs-target="#categoryModal">
+                                <i class="bi bi-tags me-1"></i> Ստեղծել կատեգորիա
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Categories Section -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card" style="background-color: white; border: 1px solid #dee2e6;">
+            <div class="card-header" style="background-color: #e9ecef; border-bottom: 1px solid #dee2e6;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>Իմ կատեգորիաները</span>
+                    <span class="badge" style="background-color: #f8f9fa; color: #495057;">
+                        {{ categories.count }} կատեգորիա
+                    </span>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if categories %}
+                <div class="table-responsive">
+                    <table class="table table-light table-hover">
+                        <thead>
+                            <tr>
+                                <th>Անվանում</th>
+                                <th>Առարկա</th>
+                                <th>Հարցերի քանակ</th>
+                                <th>Գործողություններ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for category in categories %}
+                            <tr>
+                                <td>{{ category.name }}</td>
+                                <td>{{ category.subject.name }}</td>
+                                <td>{{ category.questions.count }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-danger delete-category"
+                                            data-id="{{ category.id }}">
+                                        <i class="bi bi-trash"></i> Ջնջել
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-warning">
+                    Դուք դեռ կատեգորիաներ չունեք։ Ստեղծեք նորը՝ օգտագործելով վերևի կոճակը։
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
 
     <!-- Created Exams Section  -->
     <div class="row mt-3">
@@ -220,7 +278,7 @@
 
                     <!-- Subject Field -->
                     <div class="mb-4">
-                            <label class="form-label text-dark">Առարկա</label>
+                        <label class="form-label text-dark">Առարկա</label>
                         <select id="id_subject" class="form-select form-select-lg" name="{{ form.subject.name }}"
                                 style="background-color: white; border: 1px solid #dee2e6; color: #212529;">
                             {% for value, label in form.subject.field.choices %}
@@ -328,7 +386,7 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <script type="text/javascript">
-    
+
     $(document).ready(function () {
     $('#id_subject').on('change', function () {
         const subjectId = $(this).val();
@@ -365,7 +423,6 @@
 });
 
 </script>
-<!-- Add this JavaScript at the end of your modal -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const useRandomSwitch = document.getElementById('useRandomSwitch');
@@ -486,6 +543,47 @@
     </div>
 </div>
 
+<!-- Category Creation Modal -->
+<div class="modal fade" id="categoryModal" tabindex="-1" aria-labelledby="categoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background-color: white; border: 1px solid #dee2e6;">
+            <div class="modal-header" style="background-color: #e9ecef; border-bottom: 1px solid #dee2e6;">
+                <h5 class="modal-title text-dark" id="categoryModalLabel">Ստեղծել նոր կատեգորիա</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" id="categoryForm" action="{% url 'create_category' %}">
+                    {% csrf_token %}
+
+                    <!-- Subject Selection -->
+                    <div class="mb-3">
+                        <label class="form-label text-dark">Առարկա</label>
+                        <select class="form-select" name="subject" required
+                                style="background-color: white; border: 1px solid #dee2e6; color: #212529;">
+                            <option value="" selected disabled>Ընտրեք առարկան</option>
+                            {% for subject in subjects %}
+                            <option value="{{ subject.id }}">{{ subject.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Category Name -->
+                    <div class="mb-3">
+                        <label class="form-label text-dark">Կատեգորիայի անվանում</label>
+                        <input type="text" class="form-control" name="name" required
+                               style="background-color: white; border: 1px solid #dee2e6; color: #212529;">
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save"></i> Պահպանել
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js">
@@ -764,5 +862,69 @@
 
 
 
+</script>
+<script>
+// Category Deletion with proper error handling
+document.addEventListener('DOMContentLoaded', function() {
+    // Event delegation for delete buttons
+    document.querySelector('.card-body').addEventListener('click', function(e) {
+        const deleteBtn = e.target.closest('.delete-category');
+        if (deleteBtn) {
+            e.preventDefault();
+            const categoryId = deleteBtn.dataset.id;
 
+            if (confirm('Հաստատում եք կատեգորիայի ջնջումը? Դա կջնջի նաև կապված հարցերը։')) {
+                fetch(`/quiz/delete_category/${categoryId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `csrfmiddlewaretoken={{ csrf_token }}`
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        // Remove the row from table
+                        deleteBtn.closest('tr').remove();
+
+                        // Show success notification (using Toast or alert)
+                        showNotification('Կատեգորիան հաջողությամբ ջնջված է', 'success');
+                    } else {
+                        throw new Error(data.error || 'Delete failed');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showNotification('Սխալ կատեգորիա ջնջելիս: ' + error.message, 'error');
+                });
+            }
+        }
+    });
+
+    // Helper function for notifications (you can replace with your preferred notification system)
+    function showNotification(message, type) {
+        // Using Bootstrap Toast if available
+        if (typeof bootstrap !== 'undefined' && bootstrap.Toast) {
+            const toastEl = document.createElement('div');
+            toastEl.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
+            toastEl.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            document.body.appendChild(toastEl);
+            new bootstrap.Toast(toastEl).show();
+            setTimeout(() => toastEl.remove(), 5000);
+        } else {
+            alert(message);
+        }
+    }
+});
 </script>

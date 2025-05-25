@@ -115,6 +115,13 @@ class FeedbackAdmin(admin.ModelAdmin):
 
 class LiveStudentExamAdmin(admin.ModelAdmin):
     list_display = ('subject', 'group', 'due_date', 'time_limit', )
+
+class QuestionCategoryAdmin(admin.ModelAdmin):
+    list_display = ('name', 'subject', 'created_by')  # Or omit created_by if not used
+    search_fields = ('name', 'subject__name')
+    list_filter = ('subject',)
+
+
 #admin.site.register(User, CustomUserAdmin)
 admin.site.register(Faculty, FacultyAdmin)
 admin.site.register(Department, DepartmentAdmin)
@@ -127,3 +134,4 @@ admin.site.register(TestQuestion, TestQuestionAdmin)
 admin.site.register(MidtermExam, MidtermExamAdmin)
 admin.site.register(ExamResult, ExamResultAdmin)
 admin.site.register(LiveStudentExam, LiveStudentExamAdmin)
+admin.site.register(QuestionCategory, QuestionCategoryAdmin)

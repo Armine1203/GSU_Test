@@ -3,14 +3,17 @@ import random
 
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
-from .models import TestQuestion, MidtermExam, ExamResult, StudentAnswer, Mark
+from django.views.decorators.http import require_POST
+
+from .models import TestQuestion, MidtermExam, ExamResult, StudentAnswer, Mark, QuestionCategory
 from django.db import models
 from django.db.models import Prefetch, Avg, Count, F, Sum, Exists, OuterRef, When, Case, BooleanField
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.views import View
 from .forms import SubjectForm, MidtermExamForm
-from .models import TestQuestion, Lecturer, Subject, Group, StudentAnswer, ExamResult, Mark, MidtermExam, Student, LiveStudentExam
+from .models import TestQuestion, Lecturer, Subject, Group, StudentAnswer, ExamResult, Mark, MidtermExam, Student, \
+    LiveStudentExam
 from django.contrib import messages
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
@@ -26,7 +29,6 @@ from django.views.generic import View
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
-
 
 
 # Create your views here.
@@ -128,6 +130,7 @@ class Quiz(View):
             messages.error(request, "Exam not found")
             return redirect("student_dashboard")
 
+
 @method_decorator(login_required, name="dispatch")
 class AddQuestion(View):
     def get(self, request):
@@ -136,8 +139,6 @@ class AddQuestion(View):
             return redirect("index")
 
         # Get parameters with defaults
-
-        # հարցե8ի քանակը կարող ենք փոխել
         try:
             question_count = int(request.GET.get('count', 2))
             question_count = max(1, min(100, question_count))  # Limit between 1-100
@@ -164,7 +165,8 @@ class AddQuestion(View):
                 "lecturer": lecturer,
                 "subjects": lecturer.subjects.all(),
                 "selected_subject": subject,
-                "question_count": question_count
+                "question_count": question_count,
+                "categories": QuestionCategory.objects.filter(created_by=request.user),  # Fixed this line
             }
         )
 
@@ -199,12 +201,21 @@ class AddQuestion(View):
             o3 = data.get(f"q{i}o3", "").strip()
             o4 = data.get(f"q{i}o4", "").strip()
             co = data.get(f"q{i}c", "")
+
             score = int(data.get(f"q{i}score", 1))
             image = files.get(f"q{i}image")
 
             if TestQuestion.objects.filter(question=q, subject=subject).exists():
                 already_exists += 1
                 continue
+
+            category_id = data.get(f"q{i}category")
+            category = None
+            if category_id:
+                try:
+                    category = QuestionCategory.objects.get(id=category_id, created_by=request.user)  # Fixed this line
+                except QuestionCategory.DoesNotExist:
+                    pass
 
             question = TestQuestion(
                 subject=subject,
@@ -216,7 +227,8 @@ class AddQuestion(View):
                 correct_option=co,
                 score=score,
                 creator=request.user,
-                image=image
+                image=image,
+                category=category,
             )
             question.save()
             count += 1
@@ -229,6 +241,7 @@ class AddQuestion(View):
             messages.warning(request, "Հարցեր չկան ավելացվելու համար")
 
         return redirect("lecturer_dashboard")
+
 
 @method_decorator(login_required, name="dispatch")
 class Result(View):
@@ -424,8 +437,12 @@ class LecturerDashboard(View):
         now = timezone.now()
 
         # Get lecturer's subjects and questions
-        subjects = Subject.objects.filter(lecturers=request.user)
+        subjects = lecturer.subjects.all()
         total_questions = TestQuestion.objects.filter(subject__in=subjects).count()
+
+        # Get categories
+        categories = QuestionCategory.objects.filter(created_by=request.user)
+        print("Categories count:", categories.count())  # Debug output
 
         # Get exams created by this lecturer with annotations
         created_exams = MidtermExam.objects.filter(
@@ -448,6 +465,7 @@ class LecturerDashboard(View):
             'created_exams': created_exams,
             'now': now,
             'form': form,
+            'categories': categories,  # Add this line
         })
 
 # Add to views.py
@@ -549,8 +567,6 @@ class SelectQuestionCount(View):
             return redirect("select_question_count")
 
         return redirect(f"{reverse('add_question')}?count={question_count}&subject={subject_id}")
-
-# API Views
 
 def api_questions_list(request):
     if not request.user.is_authenticated or not hasattr(request.user, 'lecturer'):
@@ -791,89 +807,151 @@ def exam_detail_view(request, exam_id):
     exam = get_object_or_404(MidtermExam, id=exam_id)
     return render(request, 'exams/exam_detail.html', {'exam': exam})
 
+
 @login_required
 def create_exam(request):
     if request.method == 'POST':
         form = MidtermExamForm(request.POST, user=request.user)
-        print("Apppppppp[per I am working fine Invalid]")
-        print(form.errors)
 
         if form.is_valid():
-            print("Apppppppp[per I am working fine]")
             exam = form.save(commit=False)
             exam.created_by = request.user
-            exam.save()  # Save exam first to get an ID
-            print(f"Exam saved with ID: {exam.id}")
+            exam.save()
 
             use_random = form.cleaned_data.get('use_random', False)
-            print(f"Use random questions: {use_random}")
 
             if use_random:
-                print("Random exam workflow starting")
                 try:
                     questions_per_student = form.cleaned_data['questions_per_student']
                     subject = form.cleaned_data['subject']
                     group = form.cleaned_data['group']
-                    print(f"Creating exam with {questions_per_student} questions per student")
 
-                    # Get all questions for the subject
-                    all_questions = list(TestQuestion.objects.filter(subject=subject))
-                    print(f"Found {len(all_questions)} questions in the pool")
+                    # Get all questions for this subject with categories
+                    questions = TestQuestion.objects.filter(subject=subject).select_related('category')
 
-                    if len(all_questions) < questions_per_student:
-                        error_msg = f"Not enough questions available. Need {questions_per_student}, have {len(all_questions)}"
-                        print(error_msg)
-                        form.add_error(None, error_msg)
+                    if not questions.exists():
+                        form.add_error(None, "No questions available for this subject")
                         return render(request, 'quiz/exam_form.html', {'form': form})
 
-                    # For each student in the group, create a personalized set of questions
+                    # Group questions by category
+                    categories = {}
+                    uncategorized = []
+
+                    for q in questions:
+                        if q.category:
+                            if q.category.id not in categories:
+                                categories[q.category.id] = {
+                                    'name': q.category.name,
+                                    'questions': []
+                                }
+                            categories[q.category.id]['questions'].append(q)
+                        else:
+                            uncategorized.append(q)
+
+                    # If no categories exist, treat all questions as one category
+                    if not categories:
+                        categories['uncategorized'] = {
+                            'name': 'General',
+                            'questions': uncategorized
+                        }
+
+                    # Calculate how many questions to take from each category
+                    num_categories = len(categories)
+                    base_per_category = questions_per_student // num_categories
+                    remainder = questions_per_student % num_categories
+
                     students = group.student_set.all()
-                    print(f"Creating exams for {students.count()} students")
 
                     for student in students:
-                        print(f"Processing student: {student}")
-                        selected_questions = random.sample(all_questions, questions_per_student)
-                        print(f"Selected questions: {[q.id for q in selected_questions]}")
+                        selected_questions = []
+                        total_score = 0
 
+                        # Select questions from each category
+                        for i, (cat_id, cat_data) in enumerate(categories.items()):
+                            # Determine how many questions to take from this category
+                            if i < remainder:
+                                take = base_per_category + 1
+                            else:
+                                take = base_per_category
+
+                            # Get available questions in this category
+                            available_questions = cat_data['questions']
+
+                            # If we don't have enough questions, take what we can
+                            take = min(take, len(available_questions))
+
+                            if take > 0:
+                                # Randomly select questions without replacement
+                                selected = random.sample(available_questions, take)
+                                selected_questions.extend(selected)
+                                total_score += sum(q.score for q in selected)
+
+                        # Adjust to reach exactly 20 points
+                        if total_score != 20:
+                            # Find all questions not yet selected
+                            remaining_questions = [
+                                q for q in questions
+                                if q not in selected_questions
+                            ]
+
+                            # Sort by score to help with adjustments
+                            remaining_questions.sort(key=lambda x: x.score)
+
+                            # Try to adjust the total score to 20
+                            if total_score < 20:
+                                # Need to add questions
+                                for q in remaining_questions:
+                                    if total_score + q.score <= 20:
+                                        selected_questions.append(q)
+                                        total_score += q.score
+                                        if total_score == 20:
+                                            break
+                            else:
+                                # Need to remove questions
+                                selected_questions.sort(key=lambda x: x.score)
+                                while total_score > 20 and selected_questions:
+                                    removed = selected_questions.pop()
+                                    total_score -= removed.score
+
+                        # Final check
+                        if total_score != 20:
+                            messages.warning(
+                                request,
+                                f"Could not reach exactly 20 points for student {student}. Got {total_score}"
+                            )
+
+                        # Create the exam for this student
                         live_exam = LiveStudentExam(student=student, exam=exam)
                         live_exam.save()
                         live_exam.questions.set(selected_questions)
-                        print(f"Created LiveStudentExam {live_exam.id} for student {student.id}")
 
-                    success_msg = f"Exam created with {questions_per_student} random questions per student"
-                    print(success_msg)
-                    messages.success(request, success_msg)
+                    messages.success(
+                        request,
+                        f"Created random exams for {students.count()} students "
+                        f"with {questions_per_student} questions each"
+                    )
                     return redirect('lecturer_dashboard')
 
                 except Exception as e:
-                    error_msg = f"Error in random exam creation: {str(e)}"
-                    print(error_msg)
-                    form.add_error(None, error_msg)
+                    form.add_error(None, f"Error creating random exams: {str(e)}")
                     return render(request, 'quiz/exam_form.html', {'form': form})
 
             else:
-                print("Manual exam workflow starting")
                 # Manual selection - save the selected questions
                 form.save_m2m()
-                print(f"Saved {exam.questions.count()} manually selected questions")
 
                 # Create LiveStudentExam for each student with all questions
                 students = exam.group.student_set.all()
-                print(f"Creating exams for {students.count()} students")
 
                 for student in students:
-                    print(f"Processing student: {student}")
                     live_exam = LiveStudentExam(student=student, exam=exam)
                     live_exam.save()
                     live_exam.questions.set(exam.questions.all())
-                    print(f"Created LiveStudentExam {live_exam.id} for student {student.id}")
 
-                success_msg = "Քննությունը հաջողությամբ ստեղծվել է։ Այն կարող եք տեսնել Իմ ստեղծած քննությունները բաժնում"
-                print(success_msg)
-                messages.success(request, success_msg)
+                messages.success(request, "Exam created with manually selected questions")
                 return redirect('lecturer_dashboard')
+
     else:
-        print("Initial form load")
         form = MidtermExamForm(user=request.user)
 
     return render(request, 'quiz/exam_form.html', {'form': form})
@@ -1128,3 +1206,111 @@ def load_questions(request):
     subject_id = request.GET.get('subject_id')
     questions = TestQuestion.objects.filter(subject_id=subject_id).values('id', 'question')
     return JsonResponse(list(questions), safe=False)
+
+def pick_questions_by_dynamic_category(subject, total_score_required, questions_per_test):
+    categories = QuestionCategory.objects.filter(subject=subject)
+    questions = TestQuestion.objects.filter(subject=subject)
+
+    # Group questions by category
+    category_map = {}
+    for cat in categories:
+        cat_questions = list(questions.filter(category=cat))
+        if cat_questions:
+            category_map[cat.id] = cat_questions
+
+    if not category_map:
+        raise ValueError("No question categories with questions found.")
+
+    num_categories = len(category_map)
+    questions_per_category = max(1, questions_per_test // num_categories)
+
+    selected_questions = []
+    score_so_far = 0
+
+    for cat_id, question_list in category_map.items():
+        if len(question_list) < questions_per_category:
+            continue  # Skip if not enough questions in category
+
+        chosen = random.sample(question_list, questions_per_category)
+        selected_questions.extend(chosen)
+        score_so_far += sum(q.score for q in chosen)
+
+    # Add extra questions to reach total_score_required
+    remaining_questions = [q for q in questions if q not in selected_questions]
+    random.shuffle(remaining_questions)
+    for q in remaining_questions:
+        if score_so_far + q.score <= total_score_required:
+            selected_questions.append(q)
+            score_so_far += q.score
+        if score_so_far == total_score_required:
+            break
+
+    if score_so_far != total_score_required:
+        raise ValueError("Unable to generate balanced questions totaling 20 points.")
+
+    return selected_questions
+
+@login_required
+def create_category(request):
+    if request.method == 'POST':
+        if not hasattr(request.user, 'lecturer'):
+            messages.error(request, "Միայն դասախոսները կարող են կատեգորիաներ ստեղծել")
+            return redirect('lecturer_dashboard')
+
+        subject_id = request.POST.get('subject')
+        name = request.POST.get('name').strip()
+
+        try:
+            subject = Subject.objects.get(id=subject_id)
+            if subject not in request.user.lecturer.subjects.all():
+                messages.error(request, "Դուք չեք դասավանդում այս առարկան")
+                return redirect('lecturer_dashboard')
+
+            # Create the category
+            category = QuestionCategory.objects.create(
+                subject=subject,
+                name=name,
+                created_by=request.user
+            )
+
+            messages.success(request, f"«{name}» կատեգորիան հաջողությամբ ստեղծվել է")
+            return redirect('lecturer_dashboard')
+
+        except Subject.DoesNotExist:
+            messages.error(request, "Առարկան չի գտնվել")
+        except Exception as e:
+            messages.error(request, f"Սխալ կատեգորիա ստեղծելիս: {str(e)}")
+
+    return redirect('lecturer_dashboard')
+
+
+@require_POST
+@login_required
+def delete_category(request, category_id):
+    try:
+        # Ensure the category belongs to the lecturer
+        category = QuestionCategory.objects.get(
+            id=category_id,
+            subject__lecturer__user=request.user
+        )
+
+        # Delete the category
+        category_name = category.name
+        category.delete()
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Category "{category_name}" deleted successfully'
+        })
+
+    except QuestionCategory.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Category not found or you dont have permission'
+        }, status=404)
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

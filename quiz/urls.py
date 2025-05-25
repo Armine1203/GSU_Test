@@ -43,4 +43,7 @@ urlpatterns = [
     path('feedback/success/', views.feedback_success, name='feedback_success'),
     path('ajax/load-questions/', views.load_questions, name='ajax_load_questions'),
 
+#caTEGORY
+    path('create-category/', views.create_category, name='create_category'),
+    path('delete_category/<int:category_id>/', views.delete_category, name='delete_category'),
 ]

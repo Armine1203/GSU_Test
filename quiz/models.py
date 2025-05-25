@@ -67,8 +67,17 @@ class Subject(models.Model):
     def __str__(self):
         return f"{self.name} - {self.major} (Year {self.year}, Semester {self.semester})"
 
+class QuestionCategory(models.Model):
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
+    name = models.CharField(max_length=100)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+
+    def __str__(self):
+        return self.name
+
 class TestQuestion(models.Model):
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
+    category = models.ForeignKey(QuestionCategory, on_delete=models.CASCADE, null=True, blank=True, related_name="questions")
     question = models.TextField()
     option1 = models.CharField(max_length=200)
     option2 = models.CharField(max_length=200)
