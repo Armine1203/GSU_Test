@@ -4,7 +4,7 @@ import random
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.views.decorators.http import require_POST
-
+from django.db.models import Q
 from .models import TestQuestion, MidtermExam, ExamResult, StudentAnswer, Mark, QuestionCategory
 from django.db import models
 from django.db.models import Prefetch, Avg, Count, F, Sum, Exists, OuterRef, When, Case, BooleanField
@@ -76,30 +76,34 @@ class Quiz(View):
     def post(self, request):
         exam_id = request.POST.get('exam_id')
         try:
-            # First try to get as LiveStudentExam
-            try:
-                exam = LiveStudentExam.objects.get(id=exam_id, student=request.user.student)
-                exam_for_result = exam
-            except LiveStudentExam.DoesNotExist:
-                # Fall back to MidtermExam
-                exam_for_result = MidtermExam.objects.get(id=exam_id)
+            # Always get the MidtermExam instance first
+            midterm_exam = MidtermExam.objects.get(id=exam_id)
 
-            if Mark.objects.filter(user=request.user, exam=exam_for_result).exists():
-                messages.error(request, "You have already taken this exam")
+            # Check if student already took the exam
+            if Mark.objects.filter(user=request.user, exam=midterm_exam).exists():
+                messages.error(request, "Դուք արդեն անցել եք այս քննությունը")
                 return redirect("student_dashboard")
+
+            # Check if LiveStudentExam exists
+            try:
+                live_exam = LiveStudentExam.objects.get(exam=midterm_exam, student=request.user.student)
+                questions = live_exam.questions.all()
+                exam_for_result = live_exam
+            except LiveStudentExam.DoesNotExist:
+                questions = midterm_exam.questions.all()
+                exam_for_result = midterm_exam
 
             correct = 0
             student_answers = []
-            questions = exam_for_result.questions.all()
 
-            for i, question in enumerate(questions, start=1):
+            for question in questions:
                 user_answer = request.POST.get(f'q{question.id}o')
                 if not user_answer:
                     continue
 
                 is_correct = user_answer == question.correct_option
                 if is_correct:
-                    correct += 1
+                    correct += question.score  # ✅ use question's score instead of 1
 
                 answer = StudentAnswer.objects.create(
                     question=question,
@@ -108,17 +112,16 @@ class Quiz(View):
                 )
                 student_answers.append(answer)
 
-            # Create mark
+            # Save total and got score
             mark = Mark.objects.create(
                 user=request.user,
-                exam=exam_for_result,
-                total=len(questions),
+                exam=midterm_exam,  # ✅ Always save MidtermExam here
+                total=sum(q.score for q in questions),
                 got=correct
             )
 
-            # Create exam result
             exam_result = ExamResult.objects.create(
-                exam=exam_for_result,
+                exam=exam_for_result,  # This can be LiveStudentExam or MidtermExam
                 student=request.user.student,
                 score=correct
             )
@@ -126,8 +129,8 @@ class Quiz(View):
 
             return redirect("result_detail", result_id=mark.id)
 
-        except (MidtermExam.DoesNotExist, LiveStudentExam.DoesNotExist):
-            messages.error(request, "Exam not found")
+        except MidtermExam.DoesNotExist:
+            messages.error(request, "Քննությունը չի գտնվել")
             return redirect("student_dashboard")
 
 
@@ -269,7 +272,6 @@ class Result(View):
             "best_score": best_score
         })
 
-
 @method_decorator(login_required, name="dispatch")
 class Leaderboard(View):
     def get(self, request):
@@ -278,14 +280,21 @@ class Leaderboard(View):
                 student = request.user.student
                 current_group = student.group
 
+                # Use 'group_exams' variable here for consistency
                 group_exams = MidtermExam.objects.filter(
                     group=current_group
                 ).select_related('subject').order_by('-due_date')
 
-                exam_ct = ContentType.objects.get_for_model(MidtermExam)
+                # Live student exams for the student
+                live_exams = LiveStudentExam.objects.filter(student=student)
+
+                midterm_ct = ContentType.objects.get_for_model(MidtermExam)
+                live_ct = ContentType.objects.get_for_model(LiveStudentExam)
+
                 exam_results = ExamResult.objects.filter(
-                    content_type=exam_ct,
-                    object_id__in=group_exams.values_list('id', flat=True)
+                    Q(content_type=midterm_ct, object_id__in=group_exams.values_list('id', flat=True)) |
+                    Q(content_type=live_ct, object_id__in=live_exams.values_list('id', flat=True)),
+                    student=student
                 ).select_related('student')
 
                 context = {
@@ -359,7 +368,7 @@ class Leaderboard(View):
         document = Document()
 
         # Add title
-        document.add_heading(f'Միջանկյալ քննության արդյունքեր - խումբ {group.name} ', level=1)
+        document.add_heading(f'Միջանկյալ քննության արդյունքներ - խումբ {group.name}', level=1)
 
         for exam in exams:
             # Add exam section
@@ -390,6 +399,8 @@ class Leaderboard(View):
         document.save(response)
 
         return response
+
+
 
 
 @method_decorator(login_required, name="dispatch")
@@ -808,6 +819,11 @@ def exam_detail_view(request, exam_id):
     return render(request, 'exams/exam_detail.html', {'exam': exam})
 
 
+from django.contrib import messages
+from django.shortcuts import redirect, render
+from django.contrib.auth.decorators import login_required
+import random
+
 @login_required
 def create_exam(request):
     if request.method == 'POST':
@@ -826,14 +842,12 @@ def create_exam(request):
                     subject = form.cleaned_data['subject']
                     group = form.cleaned_data['group']
 
-                    # Get all questions for this subject with categories
                     questions = TestQuestion.objects.filter(subject=subject).select_related('category')
 
                     if not questions.exists():
-                        form.add_error(None, "No questions available for this subject")
-                        return render(request, 'quiz/exam_form.html', {'form': form})
+                        messages.error(request, "Ընթացիկ առարկայի համար հարցեր չկան:")
+                        return redirect('lecturer_dashboard')
 
-                    # Group questions by category
                     categories = {}
                     uncategorized = []
 
@@ -848,58 +862,50 @@ def create_exam(request):
                         else:
                             uncategorized.append(q)
 
-                    # If no categories exist, treat all questions as one category
-                    if not categories:
+                    if not categories and uncategorized:
                         categories['uncategorized'] = {
-                            'name': 'General',
+                            'name': 'Ընդհանուր',
                             'questions': uncategorized
                         }
+                    elif not categories and not uncategorized:
+                        messages.error(request, "Առարկայի համար հարցեր չկան:")
+                        return redirect('lecturer_dashboard')
 
-                    # Calculate how many questions to take from each category
                     num_categories = len(categories)
+                    if num_categories == 0:
+                        messages.error(request, "Հարցերով կատեգորիաներ չեն գտնվել:")
+                        return redirect('lecturer_dashboard')
+
                     base_per_category = questions_per_student // num_categories
                     remainder = questions_per_student % num_categories
 
+                    for cat_id, cat_data in categories.items():
+                        available = len(cat_data['questions'])
+                        required = base_per_category + (1 if remainder > 0 else 0)
+                        if available < required:
+                            messages.error(request, f"Կատեգորիան '{cat_data['name']}' ունի միայն {available} հարց, բայց անհրաժեշտ է {required}")
+                            return redirect('lecturer_dashboard')
+
                     students = group.student_set.all()
+                    category_ids = list(categories.keys())
 
                     for student in students:
                         selected_questions = []
-                        total_score = 0
+                        random.shuffle(category_ids)
 
-                        # Select questions from each category
-                        for i, (cat_id, cat_data) in enumerate(categories.items()):
-                            # Determine how many questions to take from this category
-                            if i < remainder:
-                                take = base_per_category + 1
-                            else:
-                                take = base_per_category
+                        for i, cat_id in enumerate(category_ids):
+                            cat_data = categories[cat_id]
+                            take = base_per_category + (1 if i < remainder else 0)
+                            selected = random.sample(cat_data['questions'], take)
+                            selected_questions.extend(selected)
 
-                            # Get available questions in this category
-                            available_questions = cat_data['questions']
+                        total_score = sum(q.score for q in selected_questions)
 
-                            # If we don't have enough questions, take what we can
-                            take = min(take, len(available_questions))
-
-                            if take > 0:
-                                # Randomly select questions without replacement
-                                selected = random.sample(available_questions, take)
-                                selected_questions.extend(selected)
-                                total_score += sum(q.score for q in selected)
-
-                        # Adjust to reach exactly 20 points
                         if total_score != 20:
-                            # Find all questions not yet selected
-                            remaining_questions = [
-                                q for q in questions
-                                if q not in selected_questions
-                            ]
-
-                            # Sort by score to help with adjustments
+                            remaining_questions = [q for q in questions if q not in selected_questions]
                             remaining_questions.sort(key=lambda x: x.score)
 
-                            # Try to adjust the total score to 20
                             if total_score < 20:
-                                # Need to add questions
                                 for q in remaining_questions:
                                     if total_score + q.score <= 20:
                                         selected_questions.append(q)
@@ -907,40 +913,33 @@ def create_exam(request):
                                         if total_score == 20:
                                             break
                             else:
-                                # Need to remove questions
                                 selected_questions.sort(key=lambda x: x.score)
                                 while total_score > 20 and selected_questions:
                                     removed = selected_questions.pop()
                                     total_score -= removed.score
 
-                        # Final check
                         if total_score != 20:
                             messages.warning(
                                 request,
-                                f"Could not reach exactly 20 points for student {student}. Got {total_score}"
+                                f"{student} ուսանողի համար հնարավոր չեղավ ստանալ ճիշտ 20 միավոր ({total_score})"
                             )
 
-                        # Create the exam for this student
                         live_exam = LiveStudentExam(student=student, exam=exam)
                         live_exam.save()
                         live_exam.questions.set(selected_questions)
 
                     messages.success(
                         request,
-                        f"Created random exams for {students.count()} students "
-                        f"with {questions_per_student} questions each"
+                        f"{students.count()} ուսանողի համար պատահական թեստեր ստեղծվեցին, յուրաքանչյուրում {questions_per_student} հարցով"
                     )
                     return redirect('lecturer_dashboard')
 
                 except Exception as e:
-                    form.add_error(None, f"Error creating random exams: {str(e)}")
-                    return render(request, 'quiz/exam_form.html', {'form': form})
+                    messages.error(request, f"Սխալ պատահեց պատահական թեստեր ստեղծելիս: {str(e)}")
+                    return redirect('lecturer_dashboard')
 
             else:
-                # Manual selection - save the selected questions
                 form.save_m2m()
-
-                # Create LiveStudentExam for each student with all questions
                 students = exam.group.student_set.all()
 
                 for student in students:
@@ -948,72 +947,76 @@ def create_exam(request):
                     live_exam.save()
                     live_exam.questions.set(exam.questions.all())
 
-                messages.success(request, "Exam created with manually selected questions")
+                messages.success(request, "Թեստը հաջողությամբ ստեղծվեց ընտրված հարցերով:")
                 return redirect('lecturer_dashboard')
 
+        else:
+            messages.error(request, "Սխալ տվյալներ: Խնդրում ենք ստուգել լրացված դաշտերը:")
+            return redirect('lecturer_dashboard')
+
     else:
-        form = MidtermExamForm(user=request.user)
+        messages.error(request, "Թեստի ձևը պետք է ուղարկվի POST մեթոդով:")
+        return redirect('lecturer_dashboard')
 
-    return render(request, 'quiz/exam_form.html', {'form': form})
 
-def create_exam_with_random_questions(subject, group, due_date, time_limit, created_by, questions_per_student=6):
-    """
-    Creates an exam with randomly selected questions for each student,
-    ensuring even distribution across the question pool.
-
-    Args:
-        subject: Subject instance
-        group: Group instance
-        due_date: Exam due date
-        time_limit: Exam duration in minutes
-        created_by: User who created the exam
-        questions_per_student: Number of questions per student
-    """
-    # Get all questions for the subject
-    all_questions = list(TestQuestion.objects.filter(subject=subject).order_by('id'))
-    total_questions = len(all_questions)
-
-    if total_questions < questions_per_student:
-        raise ValueError(f"Not enough questions available. Need {questions_per_student}, have {total_questions}")
-
-    # Calculate how many questions to select from each segment
-    segment_size = total_questions // questions_per_student
-    remainder = total_questions % questions_per_student
-
-    # Create the exam
-    with transaction.atomic():
-        exam = MidtermExam.objects.create(
-            subject=subject,
-            group=group,
-            due_date=due_date,
-            time_limit=time_limit,
-            created_by=created_by
-        )
-
-        # Select questions using segmented random selection
-        selected_questions = []
-        for i in range(questions_per_student):
-            # Calculate segment boundaries
-            start = i * segment_size
-            end = (i + 1) * segment_size
-
-            # Adjust for remainder if needed
-            if i < remainder:
-                start += i
-                end += i + 1
-            else:
-                start += remainder
-                end += remainder
-
-            # Select one random question from this segment
-            segment_questions = all_questions[start:end]
-            if segment_questions:
-                selected_questions.append(random.choice(segment_questions))
-
-        # Add selected questions to exam
-        exam.questions.set(selected_questions)
-
-        return exam
+# def create_exam_with_random_questions(subject, group, due_date, time_limit, created_by, questions_per_student=6):
+#     """
+#     Creates an exam with randomly selected questions for each student,
+#     ensuring even distribution across the question pool.
+#
+#     Args:
+#         subject: Subject instance
+#         group: Group instance
+#         due_date: Exam due date
+#         time_limit: Exam duration in minutes
+#         created_by: User who created the exam
+#         questions_per_student: Number of questions per student
+#     """
+#     # Get all questions for the subject
+#     all_questions = list(TestQuestion.objects.filter(subject=subject).order_by('id'))
+#     total_questions = len(all_questions)
+#
+#     if total_questions < questions_per_student:
+#         raise ValueError(f"Not enough questions available. Need {questions_per_student}, have {total_questions}")
+#
+#     # Calculate how many questions to select from each segment
+#     segment_size = total_questions // questions_per_student
+#     remainder = total_questions % questions_per_student
+#
+#     # Create the exam
+#     with transaction.atomic():
+#         exam = MidtermExam.objects.create(
+#             subject=subject,
+#             group=group,
+#             due_date=due_date,
+#             time_limit=time_limit,
+#             created_by=created_by
+#         )
+#
+#         # Select questions using segmented random selection
+#         selected_questions = []
+#         for i in range(questions_per_student):
+#             # Calculate segment boundaries
+#             start = i * segment_size
+#             end = (i + 1) * segment_size
+#
+#             # Adjust for remainder if needed
+#             if i < remainder:
+#                 start += i
+#                 end += i + 1
+#             else:
+#                 start += remainder
+#                 end += remainder
+#
+#             # Select one random question from this segment
+#             segment_questions = all_questions[start:end]
+#             if segment_questions:
+#                 selected_questions.append(random.choice(segment_questions))
+#
+#         # Add selected questions to exam
+#         exam.questions.set(selected_questions)
+#
+#         return exam
 
 @login_required
 def get_question(request, question_id):
@@ -1282,7 +1285,6 @@ def create_category(request):
             messages.error(request, f"Սխալ կատեգորիա ստեղծելիս: {str(e)}")
 
     return redirect('lecturer_dashboard')
-
 
 @require_POST
 @login_required

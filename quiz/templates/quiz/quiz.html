@@ -18,7 +18,8 @@
         <div class="card mb-4" style="border: 1px solid #dee2e6;">
                     <div class="card-header" style="background-color: #e9ecef; color: #495057; border-bottom: 1px solid #dee2e6;">
                 Հարց {{ forloop.counter }}
-            </div>
+                    <span class="badge  text-dark">({{ question.score }} միավոր)</span>
+                     </div>
             <div class="card-body" style="background-color: #f8f9fa;">
                 <h5 class="user-select-none" style="color: #212529;">{{ question.question }}</h5>
 
