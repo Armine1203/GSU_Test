@@ -29,7 +29,13 @@ SECRET_KEY = environ.get('SECRET_KEY','django-insecure-((8ig+(f!i%-9xhzcme^_-(+e
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    '127.0.0.1',
+    'localhost',
+    '409a-91-205-199-229.ngrok-free.app',  # ← Your full ngrok domain
+    '.ngrok.io',
+    '.ngrok-free.app',
+]
 
 
 # Application definition
@@ -154,3 +160,6 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_CHARSET = 'utf-8'
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://409a-91-205-199-229.ngrok-free.app',
+]

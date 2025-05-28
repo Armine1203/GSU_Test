@@ -14,7 +14,8 @@
                     <h5 class="mb-0 text-dark">Խմբեր</h5>
                 </div>
                 <div class="card-body">
-                    <select name="group" class="form-select" onchange="this.form.submit()" style="background-color: white; border: 1px solid #dee2e6; color: #212529;">
+                    <select name="group" class="form-select" onchange="this.form.submit()"
+                            style="background-color: white; border: 1px solid #dee2e6; color: #212529;">
                         <option value="">-- Ընտրել խումբը --</option>
                         {% for group in groups %}
                         <option value="{{ group.id }}"
@@ -35,6 +36,9 @@
                 <a href="?group={{ selected_group.id }}&export=word" class="btn btn-success">
                     <i class="bi bi-file-word"></i> Ներբեռնել արդյունքների Word ֆայլը
                 </a>
+                <a href="?group={{ selected_group.id }}&export=excel" class="btn btn-success">
+                    <i class="bi bi-file-excel"></i> Ներբեռնել արդյունքների Excel ֆայլը
+                </a>
             </div>
         </div>
     </div>
@@ -42,11 +46,13 @@
     {% endif %}
 
     {% if error %}
-    <div class="alert alert-danger text-center mt-4" style="background-color: #f8d7da; border-color: #f5c6cb; color: #721c24;">
+    <div class="alert alert-danger text-center mt-4"
+         style="background-color: #f8d7da; border-color: #f5c6cb; color: #721c24;">
         {{ error }}
     </div>
     {% elif no_exams %}
-    <div class="alert alert-warning text-center mt-4" style="background-color: #fff3cd; border-color: #ffeeba; color: #856404;">
+    <div class="alert alert-warning text-center mt-4"
+         style="background-color: #fff3cd; border-color: #ffeeba; color: #856404;">
         {% if user_type == 'student' %}
         Ձեր խմբի համար դեռ քննություններ չեն ստեղծվել։
         {% else %}
@@ -77,14 +83,17 @@
                         <tr style="background-color: #e9ecef;">
                             <th class="text-dark">#</th>
                             <th class="text-dark">Ուսանող</th>
+                            {% if user_type == 'lecturer' %}  <!-- Only show ID column for lecturers -->
                             <th class="text-dark">ID</th>
+                            {% endif %}
                             <th class="text-dark">Միավոր</th>
                             <th class="text-dark">Տոկոս</th>
                         </tr>
                         </thead>
                         <tbody>
+                        <!-- Midterm Exam Results -->
                         {% for result in exam_results %}
-                        {% if result.exam.id == exam.id %}
+                        {% if result.content_type.model == 'midtermexam' and result.object_id == exam.id %}
                         <tr style="background-color: white;">
                             <td class="text-dark">{{ forloop.counter }}</td>
                             <td class="text-dark">
@@ -93,7 +102,40 @@
                                 <span class="badge bg-info text-dark" style="background-color: #bee5eb;">Դուք</span>
                                 {% endif %}
                             </td>
+                            {% if user_type == 'lecturer' %}  <!-- Only show ID for lecturers -->
                             <td class="text-dark">{{ result.student.id_number }}</td>
+                            {% endif %}
+                            <td class="text-dark">{{ result.got }}</td>
+                            <td class="text-dark">
+                                <div class="progress" style="height: 25px;">
+                                    <div class="progress-bar
+                                                {% if result.percentage >= 80 %}bg-success
+                                                {% elif result.percentage >= 50 %}bg-warning
+                                                {% else %}bg-danger
+                                                {% endif %}"
+                                         style="width: {{ result.percentage }}%">
+                                        <span class="text-light">{{ result.percentage|floatformat:1 }}%</span>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+
+                        <!-- Live Exam Results -->
+                        {% for result in exam_results %}
+                        {% if result.content_type.model == 'livestudentexam' and result.exam.exam.id == exam.id %}
+                        <tr style="background-color: white;">
+                            <td class="text-dark">{{ forloop.counter }}</td>
+                            <td class="text-dark">
+                                {{ result.student.name }} {{ result.student.last_name }}
+                                {% if user_type == 'student' and result.student.user == request.user %}
+                                <span class="badge bg-info text-dark" style="background-color: #bee5eb;">Դուք</span>
+                                {% endif %}
+                            </td>
+                            {% if user_type == 'lecturer' %}  <!-- Only show ID for lecturers -->
+                            <td class="text-dark">{{ result.student.id_number }}</td>
+                            {% endif %}
                             <td class="text-dark">{{ result.score }}</td>
                             <td class="text-dark">
                                 <div class="progress" style="height: 25px;">
@@ -109,13 +151,23 @@
                             </td>
                         </tr>
                         {% endif %}
-                        {% empty %}
-                        <tr style="background-color: white;">
-                            <td colspan="5" class="text-center text-dark">
-                                Այս քննության համար արդյունքներ չկան
-                            </td>
-                        </tr>
                         {% endfor %}
+
+                        <!-- Missing Students (for lecturers) -->
+                        {% if user_type == 'lecturer' %}
+                        {% for student in missing_result_students %}
+                        {% if student.group.id == selected_group.id %}
+                        <tr style="background-color: #f8f9fa;">
+                            <td class="text-dark">{{ forloop.counter }}</td>
+                            <td class="text-dark">
+                                {{ student.name }} {{ student.last_name }}
+                            </td>
+                            <td class="text-dark">{{ student.id_number }}</td>
+                            <td class="text-danger" colspan="3">Չի մասնակցել</td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                        {% endif %}
                         </tbody>
                     </table>
                 </div>
@@ -135,6 +187,10 @@
         left: 50%;
         transform: translateX(-50%);
         font-weight: bold;
+    }
+    .badge.bg-info {
+        background-color: #bee5eb !important;
+        color: #0c5460 !important;
     }
 </style>
 {% endblock %}

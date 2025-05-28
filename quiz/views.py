@@ -1,5 +1,3 @@
-import json
-import random
 
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
@@ -175,7 +173,7 @@ class AddQuestion(View):
 
     def post(self, request):
         if not hasattr(request.user, 'lecturer'):
-            messages.error(request, "Only lecturers can add questions")
+            messages.error(request, "Միայն դասախոսները կարող են հարցեր ավելացնել")
             return redirect("index")
 
         lecturer = request.user.lecturer
@@ -272,136 +270,227 @@ class Result(View):
             "best_score": best_score
         })
 
+
+from django.views import View
+from django.contrib.auth.decorators import login_required
+from django.utils.decorators import method_decorator
+from django.shortcuts import  get_object_or_404
+from django.http import HttpResponse
+from django.contrib.contenttypes.models import ContentType
+
+from docx import Document
+from openpyxl import Workbook
+
+from django.views import View
+from django.contrib.auth.decorators import login_required
+from django.utils.decorators import method_decorator
+from django.shortcuts import render, get_object_or_404
+from django.http import HttpResponse
+from django.db.models import Prefetch
+from django.contrib.contenttypes.models import ContentType
+
+from docx import Document
+from openpyxl import Workbook
+
+from .models import (
+    Student, Lecturer, Group, MidtermExam,
+    LiveStudentExam, ExamResult, Subject
+)
+
+
 @method_decorator(login_required, name="dispatch")
 class Leaderboard(View):
-    def get(self, request):
+    def get(self, request, exam_id=None):
         try:
+            context = {}
+
             if hasattr(request.user, 'student'):
-                student = request.user.student
-                current_group = student.group
-
-                # Use 'group_exams' variable here for consistency
-                group_exams = MidtermExam.objects.filter(
-                    group=current_group
-                ).select_related('subject').order_by('-due_date')
-
-                # Live student exams for the student
-                live_exams = LiveStudentExam.objects.filter(student=student)
-
-                midterm_ct = ContentType.objects.get_for_model(MidtermExam)
-                live_ct = ContentType.objects.get_for_model(LiveStudentExam)
-
-                exam_results = ExamResult.objects.filter(
-                    Q(content_type=midterm_ct, object_id__in=group_exams.values_list('id', flat=True)) |
-                    Q(content_type=live_ct, object_id__in=live_exams.values_list('id', flat=True)),
-                    student=student
-                ).select_related('student')
-
-                context = {
-                    'user_type': 'student',
-                    'current_group': current_group,
-                    'group_exams': group_exams,
-                    'exam_results': exam_results,
-                }
-
+                context.update(self._student_view(request))
             elif hasattr(request.user, 'lecturer'):
-                lecturer = request.user.lecturer
-                subjects = lecturer.subjects.all()
-                groups = Group.objects.filter(
-                    major__in=subjects.values('major')
-                ).distinct()
-
-                selected_group_id = request.GET.get('group')
-                export_format = request.GET.get('export')
-                selected_group = None
-                group_exams = MidtermExam.objects.none()
-                exam_results = ExamResult.objects.none()
-
-                if selected_group_id:
-                    selected_group = get_object_or_404(Group, id=selected_group_id)
-
-                    group_exams = MidtermExam.objects.filter(
-                        group=selected_group,
-                        subject__in=subjects
-                    ).select_related('subject').order_by('-due_date')
-
-                    exam_ct = ContentType.objects.get_for_model(MidtermExam)
-                    exam_results = ExamResult.objects.filter(
-                        content_type=exam_ct,
-                        object_id__in=group_exams.values_list('id', flat=True)
-                    ).select_related('student')
-
-                    if export_format in ['word', 'excel']:
-                        return self.export_results(selected_group, group_exams, exam_results, export_format)
-
-                context = {
-                    'user_type': 'lecturer',
-                    'subjects': subjects,
-                    'groups': groups,
-                    'selected_group': selected_group,
-                    'group_exams': group_exams,
-                    'exam_results': exam_results,
-                }
-
+                context.update(self._lecturer_view(request))
             else:
-                return render(request, 'quiz/leaderboard.html', {
-                    'error': "Invalid user type"
-                })
+                return render(request, 'quiz/leaderboard.html', {'error': "Invalid user type"})
 
-            if not group_exams.exists():
+            if not context.get('group_exams'):
                 context['no_exams'] = True
 
             return render(request, 'quiz/leaderboard.html', context)
 
-        except AttributeError:
-            return render(request, 'quiz/leaderboard.html', {
-                'error': "Profile not found"
+        except Exception as e:
+            return render(request, 'quiz/leaderboard.html', {'error': str(e)})
+
+    def _student_view(self, request):
+        student = request.user.student
+        current_group = student.group
+
+        # Prefetch all related data
+        group_exams = MidtermExam.objects.filter(
+            group=current_group
+        ).select_related('subject').prefetch_related('questions')
+
+        # Get all exam results (both midterm and live exams)
+        exam_results = ExamResult.objects.filter(
+            student__group=current_group
+        ).select_related(
+            'student', 'content_type'
+        ).order_by('-completed_at')
+
+        # Identify students without results
+        students_with_results = set(
+            exam_results.values_list('student_id', flat=True).distinct()
+        )
+        missing_result_students = Student.objects.filter(
+            group=current_group
+        ).exclude(
+            id__in=students_with_results
+        )
+
+        return {
+            'user_type': 'student',
+            'current_group': current_group,
+            'group_exams': group_exams,
+            'exam_results': exam_results,
+            'missing_result_students': missing_result_students,
+        }
+
+    def _lecturer_view(self, request):
+        lecturer = request.user.lecturer
+        subjects = lecturer.subjects.all()
+        groups = Group.objects.filter(
+            major__in=subjects.values('major')
+        ).distinct().select_related('major')
+
+        selected_group_id = request.GET.get('group')
+        export_format = request.GET.get('export')
+
+        context = {
+            'user_type': 'lecturer',
+            'subjects': subjects,
+            'groups': groups,
+        }
+
+        if selected_group_id:
+            selected_group = get_object_or_404(Group, id=selected_group_id)
+            group_exams = MidtermExam.objects.filter(
+                group=selected_group,
+                subject__in=subjects
+            ).select_related('subject').prefetch_related('questions')
+
+            exam_results = ExamResult.objects.filter(
+                student__group=selected_group,
+                content_type__model__in=['midtermexam', 'livestudentexam']
+            ).select_related(
+                'student', 'content_type'
+            ).order_by('-completed_at')
+
+            # Identify students without results
+            students_with_results = set(
+                exam_results.values_list('student_id', flat=True).distinct()
+            )
+            missing_result_students = Student.objects.filter(
+                group=selected_group
+            ).exclude(
+                id__in=students_with_results
+            )
+
+            context.update({
+                'selected_group': selected_group,
+                'group_exams': group_exams,
+                'exam_results': exam_results,
+                'missing_result_students': missing_result_students,
             })
+
+            if export_format in ['word', 'excel']:
+                return self.export_results(selected_group, group_exams, exam_results, export_format)
+
+        return context
 
     def export_results(self, group, exams, results, format):
         if format == 'word':
-            return self.export_to_word(group, exams, results)
+            return self._export_to_word(group, exams, results)
         elif format == 'excel':
-            return self.export_to_excel(group, exams, results)
+            return self._export_to_excel(group, exams, results)
 
-    def export_to_word(self, group, exams, results):
+    def _export_to_word(self, group, exams, results):
         document = Document()
-
-        # Add title
-        document.add_heading(f'Միջանկյալ քննության արդյունքներ - խումբ {group.name}', level=1)
+        document.add_heading(f'Քննությունների արդյունքներ - խումբ {group.name}', level=1)
 
         for exam in exams:
-            # Add exam section
             document.add_heading(f'Առարկա - {exam.subject.name}', level=2)
-            document.add_paragraph(f'Օր - {exam.due_date.strftime("%d.%m.%Y")}')
+            document.add_paragraph(f'Ամսաթիվ - {exam.due_date.strftime("%d.%m.%Y %H:%M")}')
 
             # Create table
-            table = document.add_table(rows=1, cols=3)
+            table = document.add_table(rows=1, cols=4)
             table.style = 'Table Grid'
 
-            # Add headers
+            # Header row
             hdr_cells = table.rows[0].cells
             hdr_cells[0].text = '#'
             hdr_cells[1].text = 'Ուսանող'
-            hdr_cells[2].text = 'Միավոր'
+            hdr_cells[2].text = 'ID'
+            hdr_cells[3].text = 'Միավոր'
+            hdr_cells[4].text = 'Տոկոս'
+
+            # Filter and sort results for this exam
+            exam_results = [
+                r for r in results
+                if (r.content_type.model == 'midtermexam' and r.object_id == exam.id) or
+                   (r.content_type.model == 'livestudentexam' and r.exam.exam.id == exam.id)
+            ]
+            exam_results.sort(key=lambda x: x.score, reverse=True)
 
             # Add data rows
-            exam_results = [r for r in results if r.exam.id == exam.id]
             for idx, result in enumerate(exam_results, start=1):
                 row_cells = table.add_row().cells
                 row_cells[0].text = str(idx)
                 row_cells[1].text = f"{result.student.name} {result.student.last_name}"
-                row_cells[2].text = str(result.score)
+                row_cells[2].text = result.student.id_number
+                row_cells[3].text = f"{result.score}/{result.exam.questions.count()}"
+                row_cells[4].text = f"{result.percentage:.1f}%"
 
-        # Prepare response
-        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        )
         response['Content-Disposition'] = f'attachment; filename="{group.name}_քննության_արդյունքներ.docx"'
         document.save(response)
-
         return response
 
+    def _export_to_excel(self, group, exams, results):
+        wb = Workbook()
+        ws = wb.active
+        ws.title = f"{group.name} Results"
 
+        # Header row
+        ws.append(["#", "Ուսանող", "ID", "Առարկա", "Միավոր", "Տոկոս", "Ամսաթիվ"])
 
+        # Process all exams
+        for exam in exams:
+            # Filter and sort results for this exam
+            exam_results = [
+                r for r in results
+                if (r.content_type.model == 'midtermexam' and r.object_id == exam.id) or
+                   (r.content_type.model == 'livestudentexam' and r.exam.exam.id == exam.id)
+            ]
+            exam_results.sort(key=lambda x: x.score, reverse=True)
+
+            # Add data rows
+            for idx, result in enumerate(exam_results, start=1):
+                ws.append([
+                    idx,
+                    f"{result.student.name} {result.student.last_name}",
+                    result.student.id_number,
+                    exam.subject.name,
+                    f"{result.score}/{result.exam.questions.count()}",
+                    f"{result.percentage:.1f}%",
+                    exam.due_date.strftime("%d.%m.%Y %H:%M")
+                ])
+
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="{group.name}_results.xlsx"'
+        wb.save(response)
+        return response
 
 @method_decorator(login_required, name="dispatch")
 class StudentDashboard(View):
@@ -436,7 +525,6 @@ class StudentDashboard(View):
         except AttributeError:  # Catches missing student profile
             messages.error(request, "Student profile not found")
             return redirect("index")
-
 
 @method_decorator(login_required, name="dispatch")
 class LecturerDashboard(View):
@@ -654,9 +742,7 @@ def results(request):
     student = request.user.student
 
     if exam_id:
-        # Show   exam results
         try:
-            # Try to find through LiveStudentExam first
             try:
                 live_exam = LiveStudentExam.objects.get(exam_id=exam_id, student=student)
                 result = ExamResult.objects.filter(
@@ -665,7 +751,6 @@ def results(request):
                     student=student
                 ).first()
             except LiveStudentExam.DoesNotExist:
-                # Fall back to MidtermExam
                 result = ExamResult.objects.filter(
                     content_type=ContentType.objects.get_for_model(MidtermExam),
                     object_id=exam_id,
@@ -742,6 +827,8 @@ def result_detail(request, result_id):
             answer.question.score
             for answer in exam_result.answers.all()
         )
+        correct_answers_count = sum(1 for answer in exam_result.answers.all() if answer.is_correct)
+        total_questions = exam_result.answers.count()
 
         context = {
             'result': exam_result,
@@ -762,6 +849,8 @@ def result_detail(request, result_id):
             'points_earned': points_earned,
             'total_possible_points': total_possible_points,
             'percentage': round((points_earned / total_possible_points) * 100, 2) if total_possible_points > 0 else 0,
+            'correct_answers_count': correct_answers_count,
+            'total_questions': total_questions,
         }
         return render(request, "quiz/result_detail.html", context)
 
@@ -957,66 +1046,6 @@ def create_exam(request):
     else:
         messages.error(request, "Թեստի ձևը պետք է ուղարկվի POST մեթոդով:")
         return redirect('lecturer_dashboard')
-
-
-# def create_exam_with_random_questions(subject, group, due_date, time_limit, created_by, questions_per_student=6):
-#     """
-#     Creates an exam with randomly selected questions for each student,
-#     ensuring even distribution across the question pool.
-#
-#     Args:
-#         subject: Subject instance
-#         group: Group instance
-#         due_date: Exam due date
-#         time_limit: Exam duration in minutes
-#         created_by: User who created the exam
-#         questions_per_student: Number of questions per student
-#     """
-#     # Get all questions for the subject
-#     all_questions = list(TestQuestion.objects.filter(subject=subject).order_by('id'))
-#     total_questions = len(all_questions)
-#
-#     if total_questions < questions_per_student:
-#         raise ValueError(f"Not enough questions available. Need {questions_per_student}, have {total_questions}")
-#
-#     # Calculate how many questions to select from each segment
-#     segment_size = total_questions // questions_per_student
-#     remainder = total_questions % questions_per_student
-#
-#     # Create the exam
-#     with transaction.atomic():
-#         exam = MidtermExam.objects.create(
-#             subject=subject,
-#             group=group,
-#             due_date=due_date,
-#             time_limit=time_limit,
-#             created_by=created_by
-#         )
-#
-#         # Select questions using segmented random selection
-#         selected_questions = []
-#         for i in range(questions_per_student):
-#             # Calculate segment boundaries
-#             start = i * segment_size
-#             end = (i + 1) * segment_size
-#
-#             # Adjust for remainder if needed
-#             if i < remainder:
-#                 start += i
-#                 end += i + 1
-#             else:
-#                 start += remainder
-#                 end += remainder
-#
-#             # Select one random question from this segment
-#             segment_questions = all_questions[start:end]
-#             if segment_questions:
-#                 selected_questions.append(random.choice(segment_questions))
-#
-#         # Add selected questions to exam
-#         exam.questions.set(selected_questions)
-#
-#         return exam
 
 @login_required
 def get_question(request, question_id):
@@ -1287,16 +1316,13 @@ def create_category(request):
     return redirect('lecturer_dashboard')
 
 @require_POST
-@login_required
 def delete_category(request, category_id):
     try:
-        # Ensure the category belongs to the lecturer
+        # Make sure category subject is among lecturer's subjects
         category = QuestionCategory.objects.get(
             id=category_id,
-            subject__lecturer__user=request.user
+            subject__in=request.user.lecturer.subjects.all()
         )
-
-        # Delete the category
         category_name = category.name
         category.delete()
 
@@ -1308,7 +1334,7 @@ def delete_category(request, category_id):
     except QuestionCategory.DoesNotExist:
         return JsonResponse({
             'success': False,
-            'error': 'Category not found or you dont have permission'
+            'error': 'Category not found or you don’t have permission'
         }, status=404)
 
     except Exception as e:
@@ -1316,3 +1342,4 @@ def delete_category(request, category_id):
             'success': False,
             'error': str(e)
         }, status=500)
+

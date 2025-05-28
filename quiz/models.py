@@ -207,6 +207,7 @@ class ExamResult(models.Model):
     score = models.IntegerField(default=0)
     completed_at = models.DateTimeField(auto_now_add=True)
     answers = models.ManyToManyField(StudentAnswer)
+    MAX_SCORE = 20  # Constant for all exams
 
     @property
     def total_questions(self):
@@ -216,9 +217,10 @@ class ExamResult(models.Model):
 
     @property
     def percentage(self):
-        if self.total_questions == 0:
+        """Calculate percentage based on fixed max score of 20"""
+        if self.MAX_SCORE == 0:
             return 0
-        return round((self.score / self.total_questions) * 100, 2)
+        return min(round((self.score / self.MAX_SCORE) * 100, 1), 100)  # Caps at 100%
 
     def __str__(self):
         return f"{self.student} - {self.exam} ({self.score}/{self.total_questions})"

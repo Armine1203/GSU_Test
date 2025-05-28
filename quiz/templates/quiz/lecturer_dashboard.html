@@ -596,7 +596,8 @@
 
 {% endblock %}
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js">
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
     document.addEventListener('DOMContentLoaded', function() {
         // Load groups when subject changes in exam creation
         document.getElementById('examSubject').addEventListener('change', function() {
@@ -874,67 +875,106 @@
 
 </script>
 <script>
-// Category Deletion with proper error handling
+// Add this in your main template or a separate JS file
 document.addEventListener('DOMContentLoaded', function() {
-    // Event delegation for delete buttons
-    document.querySelector('.card-body').addEventListener('click', function(e) {
+    // Use event delegation for dynamically loaded content
+    document.addEventListener('click', function(e) {
         const deleteBtn = e.target.closest('.delete-category');
-        if (deleteBtn) {
-            e.preventDefault();
-            const categoryId = deleteBtn.dataset.id;
+        if (!deleteBtn) return;
 
-            if (confirm('Հաստատում եք կատեգորիայի ջնջումը? Դա կջնջի նաև կապված հարցերը։')) {
-                fetch(`/quiz/delete_category/${categoryId}/`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': '{{ csrf_token }}',
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: `csrfmiddlewaretoken={{ csrf_token }}`
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        // Remove the row from table
-                        deleteBtn.closest('tr').remove();
+        e.preventDefault();
+        e.stopPropagation();
 
-                        // Show success notification (using Toast or alert)
-                        showNotification('Կատեգորիան հաջողությամբ ջնջված է', 'success');
-                    } else {
-                        throw new Error(data.error || 'Delete failed');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showNotification('Սխալ կատեգորիա ջնջելիս: ' + error.message, 'error');
-                });
-            }
+        const categoryId = deleteBtn.dataset.id;
+        const categoryRow = deleteBtn.closest('tr');
+        const categoryName = categoryRow.querySelector('td:first-child').textContent.trim();
+
+        if (!confirm(`Հաստատում եք "${categoryName}" կատեգորիայի ջնջումը?`)) {
+            return;
         }
+
+        // Get CSRF token from meta tag (recommended approach)
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content ||
+                         document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+
+        if (!csrfToken) {
+            console.error('CSRF token not found');
+            alert('Session error. Please refresh the page.');
+            return;
+        }
+
+        // Show loading state
+        const originalHtml = deleteBtn.innerHTML;
+        deleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        deleteBtn.disabled = true;
+
+        fetch(`/quiz/delete_category/${categoryId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({})  // Empty body
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => { throw err; });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Remove the row
+                categoryRow.remove();
+
+                // Update category count
+                const countBadge = document.querySelector('.card-header .badge');
+                if (countBadge) {
+                    const currentCount = parseInt(countBadge.textContent);
+                    countBadge.textContent = `${currentCount - 1} կատեգորիա`;
+                }
+
+                // Show success message (using Bootstrap toast)
+                showBootstrapToast('success', 'Կատեգորիան հաջողությամբ ջնջվել է');
+            } else {
+                throw new Error(data.error || 'Unknown error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showBootstrapToast('error', error.message || 'Սխալ կատեգորիա ջնջելիս');
+            deleteBtn.innerHTML = originalHtml;
+            deleteBtn.disabled = false;
+        });
     });
 
-    // Helper function for notifications (you can replace with your preferred notification system)
-    function showNotification(message, type) {
-        // Using Bootstrap Toast if available
-        if (typeof bootstrap !== 'undefined' && bootstrap.Toast) {
-            const toastEl = document.createElement('div');
-            toastEl.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
-            toastEl.innerHTML = `
+    // Helper function for Bootstrap toast notifications
+    function showBootstrapToast(type, message) {
+        const toastContainer = document.getElementById('toastContainer');
+        if (!toastContainer) return;
+
+        const toastId = 'toast-' + Date.now();
+        const toastHtml = `
+            <div id="${toastId}" class="toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0"
+                 role="alert" aria-live="assertive" aria-atomic="true">
                 <div class="d-flex">
-                    <div class="toast-body">${message}</div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
                 </div>
-            `;
-            document.body.appendChild(toastEl);
-            new bootstrap.Toast(toastEl).show();
-            setTimeout(() => toastEl.remove(), 5000);
-        } else {
-            alert(message);
-        }
+            </div>
+        `;
+
+        toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+        const toastElement = document.getElementById(toastId);
+        const toast = new bootstrap.Toast(toastElement);
+        toast.show();
+
+        // Auto-remove after hide
+        toastElement.addEventListener('hidden.bs.toast', function() {
+            toastElement.remove();
+        });
     }
 });
 </script>
