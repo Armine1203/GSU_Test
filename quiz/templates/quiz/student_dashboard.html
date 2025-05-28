@@ -3,29 +3,68 @@
 {% block title %}Student Dashboard{% endblock %}
 
 {% block body %}
-<div class="container mt-5 mb-5">
-    <h1 class="text-center">Student Dashboard</h1>
-    <div class="card">
-        <div class="card-header">
-            <h3>Welcome, {{ student.user.username }}</h3>
+<div class="container mt-5 mb-5" style="background-color: #f8f9fa; padding: 20px; border-radius: 10px;">
+    <div class="card" style="background-color: white; border: 1px solid #dee2e6;">
+        <div class="card-header" style="background-color: #e9ecef; color: #495057; border-bottom: 1px solid #dee2e6;">
+            <h3>Բարի գալուստ, {{ student.user.username }}</h3>
         </div>
         <div class="card-body">
-            <h5>Your Information:</h5>
-            <p>ID Number: {{ student.id_number }}</p>
-            <p>Group: {{ student.group.name }}</p>
-            <p>Major: {{ student.group.major.name }}</p>
+            <h5 style="color: #495057;">Ձեր ինֆորմացիան:</h5>
+            <p style="color: #212529;">Անուն-Ազգանուն: {{ student.name }} {{ student.last_name }}</p>
+            <p style="color: #212529;">Մասնագիտություն: {{ student.group.major.name }}</p>
+            <p style="color: #212529;">Խումբ: {{ student.group.name }}</p>
 
-            <h5 class="mt-4">Upcoming Exams:</h5>
-            <ul class="list-group">
+            <h5 class="mt-4" style="color: #495057;">Առաջիկա քննություններ:</h5>
+            <div class="list-group">
                 {% for exam in exams %}
-                <li class="list-group-item">
-                    {{ exam.subject.name }} - Due: {{ exam.due_date|date:"Y-m-d H:i" }}
-                    <a href="{% url 'quiz' %}" class="btn btn-sm btn-primary float-end">Take Exam</a>
-                </li>
+                {% if exam.is_available and not exam.is_completed %}
+                <div class="list-group-item" style="background-color: white; border: 1px solid #dee2e6;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong style="color: #212529;">{{ exam.subject.name }}</strong>
+                            <div class=" small" style="color: #6c757d;">
+                                Ավարտ: {{ exam.due_date|date:"Y-m-d H:i" }}
+                                (մնաց {{ exam.due_date|timeuntil }})
+                            </div>
+                        </div>
+                        <a href="{% url 'quiz' %}?exam_id={{ exam.id }}"
+                           class="btn btn-sm btn-outline-primary">
+                            Անցնել քննությունը
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
                 {% empty %}
-                <li class="list-group-item">No upcoming exams</li>
+                <div class="list-group-item" style="background-color: white; border: 1px solid #dee2e6;">
+                    Առաջիկա քննություններ չկան
+                </div>
                 {% endfor %}
-            </ul>
+            </div>
+
+            <h5 class="mt-4" style="color: #495057;">Ավարտված քննություններ:</h5>
+            <div class="list-group">
+                {% for exam in exams %}
+                {% if exam.is_completed %}
+                <div class="list-group-item" style="background-color: white; border: 1px solid #dee2e6;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong style="color: #212529;">{{ exam.subject.name }}</strong>
+                            <div class=" small" style="color: #6c757d;">
+                                Ավարտվել է: {{ exam.due_date|date:"Y-m-d H:i" }}
+                            </div>
+                        </div>
+                        <div>
+                            <span class="badge me-2" style="background-color: #d1e7dd; color: #0f5132;">Ավարտված</span>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% empty %}
+                <div class="list-group-item" style="background-color: white; border: 1px solid #dee2e6;">
+                    Չկան ավարտված քննություններ
+                </div>
+                {% endfor %}
+            </div>
         </div>
     </div>
 </div>

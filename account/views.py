@@ -13,7 +13,7 @@ User = get_user_model()
 class Login(View):
     def get(self, request):
         if request.user.is_authenticated:
-            messages.info(request, "You are already login. Logout first")
+            messages.info(request, "Դուք արդեն մուտք եք գործել։ Դուրս եկեք նախ։")
             return redirect("index")
         return render(request, "account/login.html")
 
@@ -23,12 +23,11 @@ class Login(View):
         user = authenticate(username=uname, password=passwd)
         if user is not None:
             login(request, user)
-            messages.success(request, "Դուք հաջողությամբ մուտք եք գործել")
+            messages.success(request, "Դուք հաջողությամբ մուտք եք գործել։")
 
             # Redirect based on user type
-            # Redirect based on user type
             if user.is_superuser or user.is_staff:
-                return redirect("manage")
+                return redirect("index")
             elif hasattr(user, 'user_type'):
                 if user.user_type == 2:  # Lecturer
                     return redirect("lecturer_dashboard")
@@ -38,7 +37,7 @@ class Login(View):
             # Default redirect for other users
             return redirect("index")
         else:
-            messages.warning(request, "Invalid username or password")
+            messages.warning(request, "Օգտատիրոջ անունը կամ գաղտնաբառը սխալ է։")
         return render(request, "account/login.html")
 
 
@@ -52,7 +51,7 @@ class Logout(View):
 class Register(View):
     def get(self, request):
         if request.user.is_authenticated:
-            messages.info(request, "You are already logged in")
+            messages.info(request, "Դուք արդեն մուտք եք գործել։")
             return redirect("index")
         return render(request, "account/register.html")
 
@@ -65,8 +64,8 @@ class Register(View):
             user.set_password(passwd)
             user.save()
             login(request, user)
-            messages.success(request, "User created")
+            messages.success(request, "Օգտատիրջ էջը հաջողությամբ ստեղծվել է։")
             return redirect("index")
         else:
-            messages.info(request, "User already exists.")
+            messages.info(request, "Օգտատերը արդեն գոյություն ունի։")
             return redirect("register")

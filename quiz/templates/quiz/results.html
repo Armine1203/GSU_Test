@@ -1,0 +1,63 @@
+{% extends 'layout.html' %}
+
+{% block title %}My Results{% endblock %}
+
+{% block body %}
+<div class="container mt-5 mb-5" style="background-color: #f8f9fa; padding: 20px; border-radius: 10px;">
+    <div class="card" style="background-color: white; border: 1px solid #dee2e6;">
+        <div class="card-header" style="background-color: #e9ecef; color: #495057; border-bottom: 1px solid #dee2e6;">
+            <h1>Միջանկյալ քննությունների արդյունքներ</h1>
+        </div>
+        <div class="card-body">
+            {% if results %}
+            <div class="table-responsive">
+                <table class="table table-hover table-light">
+                    <thead style="background-color: #e9ecef; color: #495057;">
+                        <tr>
+                            <th>#</th>
+                            <th>Առարկա</th>
+                            <th>Միավոր</th>
+                            <th>Տոկոսայնություն</th>
+                            <th>Օր-ժամ</th>
+                            <th>Մանրամասներ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for result in results %}
+                        <tr style="color: #212529;">
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ result.exam.subject.name }}</td>
+                            <td>{{ result.got }}/{{ result.total }}</td>
+                            <td>{{ result.percentage|default:0 }}%</td>
+                            <td>{{ result.created_at|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                <a href="{% url 'result_detail' result.id %}"
+                                   class="btn btn-sm btn-outline-primary">
+                                    Տեսնել
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card mt-4" style="background-color: white; border: 1px solid #dee2e6;">
+                <div class="card-header" style="background-color: #e9ecef; color: #495057; border-bottom: 1px solid #dee2e6;">
+                    <h5>Վիճակագրություն</h5>
+                </div>
+                <div class="card-body">
+                    <p style="color: #212529;">Թեստերի քանակ {{ total_tests }}</p>
+                    <p style="color: #212529;">Միջին արդյունք {{ avg_percentage|floatformat:2 }}%</p>
+                    <p style="color: #212529;">Լավագույն արդյունք {{ best_score.got }}/{{ best_score.total }}</p>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-info" style="background-color: #d1e7dd; color: #0f5132; border-color: #badbcc;">
+                Դուք դեռ չունեք անցած քննություններ
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

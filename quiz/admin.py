@@ -2,25 +2,14 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth import get_user_model
 from .models import *
+from django.contrib import admin
+from .models import Feedback
+from django.contrib.contenttypes.models import ContentType
 
 # Unregister the default User admin if needed
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
-
-
-# Custom User Admin
-#class CustomUserAdmin(UserAdmin):
-#    list_display = ('username', 'email', 'first_name', 'last_name', 'user_type', 'is_staff')
-#    list_filter = ('user_type', 'is_staff')
-#    fieldsets = (
-#        (None, {'fields': ('username', 'password')}),
-#        ('Personal info', {'fields': ('first_name', 'last_name', 'email')}),
-#        ('Permissions', {
-#            'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions', 'user_type'),
-#        }),
-#        ('Important dates', {'fields': ('last_login', 'date_joined')}),
-#    )
 
 
 # Register your models here
@@ -73,10 +62,9 @@ class SubjectAdmin(admin.ModelAdmin):
 
 
 class TestQuestionAdmin(admin.ModelAdmin):
-    list_display = ('question_short', 'subject', 'correct_option', 'score', 'creator', 'verified')
-    list_filter = ('subject', 'verified', 'creator')
+    list_display = ('question_short', 'subject', 'correct_option', 'score', 'creator')
+    list_filter = ('subject', 'creator')
     search_fields = ('question', 'subject__name')
-    list_editable = ('verified',)
 
     def question_short(self, obj):
         return obj.question[:50] + '...' if len(obj.question) > 50 else obj.question
@@ -95,6 +83,44 @@ class MidtermExamAdmin(admin.ModelAdmin):
 
     questions_count.short_description = 'Questions'
 
+class ExamResultAdmin(admin.ModelAdmin):
+    list_display = ('student', 'exam_display', 'score', 'percentage_display', 'completed_at')
+    list_filter = ('content_type', 'completed_at')
+    search_fields = ('student__user__username', 'student__name', 'student__last_name')
+    readonly_fields = ('percentage_display', 'exam_display')
+    date_hierarchy = 'completed_at'
+    raw_id_fields = ('student',)
+    list_select_related = ('student', 'content_type')
+
+    def percentage_display(self, obj):
+        return f"{obj.percentage}%"
+    percentage_display.short_description = 'Score %'
+
+    def exam_display(self, obj):
+        # Display the exam with its type
+        if obj.exam:
+            return f"{obj.content_type.name}: {str(obj.exam)}"
+        return "No exam"
+    exam_display.short_description = 'Exam'
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('student', 'content_type')
+
+@admin.register(Feedback)
+class FeedbackAdmin(admin.ModelAdmin):
+    list_display = ('subject','urgency', 'feedback_type', 'name', 'created_at', 'resolved')
+    list_filter = ('feedback_type', 'resolved')
+    search_fields = ('subject', 'message', 'name')
+
+class LiveStudentExamAdmin(admin.ModelAdmin):
+    list_display = ('subject', 'group', 'due_date', 'time_limit', )
+
+class QuestionCategoryAdmin(admin.ModelAdmin):
+    list_display = ('name', 'subject', 'created_by')  # Or omit created_by if not used
+    search_fields = ('name', 'subject__name')
+    list_filter = ('subject',)
+
 
 #admin.site.register(User, CustomUserAdmin)
 admin.site.register(Faculty, FacultyAdmin)
@@ -106,3 +132,6 @@ admin.site.register(Lecturer, LecturerAdmin)
 admin.site.register(Subject, SubjectAdmin)
 admin.site.register(TestQuestion, TestQuestionAdmin)
 admin.site.register(MidtermExam, MidtermExamAdmin)
+admin.site.register(ExamResult, ExamResultAdmin)
+admin.site.register(LiveStudentExam, LiveStudentExamAdmin)
+admin.site.register(QuestionCategory, QuestionCategoryAdmin)

@@ -1,0 +1,347 @@
+{% extends 'layout.html' %}
+
+{% block title %}Հարցերի ցանկ - {{ subject.name }}{% endblock %}
+
+{% block body %}
+<div class="container mt-5 mb-5"
+     style="max-width: 1200px; background-color: #f8f9fa; padding: 20px; border-radius: 10px;">
+    <div class="card" style="background-color: #f8f9fa; border: 1px solid #dee2e6;">
+        <div class="card-header" style="background-color: #e9ecef; border-bottom: 1px solid #dee2e6;">
+            <h2 class="text-dark mb-0">{{ subject.name }} - Հարցեր</h2>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-light">
+                    <thead>
+                    <tr>
+                        <th>Հարց</th>
+                        <th>Նկար</th>
+                        <th>Տարբերակներ</th>
+                        <th>Ճիշտ պատասխան</th>
+                        <th>Գործողություններ</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for question in questions %}
+                    <tr>
+                        <td>{{ question.question }}</td>
+                        <td class="text-center align-middle">
+                            {% if question.image %}
+                            <img src="{{ question.image.url }}" alt="Նկար"
+                                 class="img-fluid rounded zoom-image"
+                                 style="max-width: 150px; height: auto;">
+                            {% else %}
+                            <span class="text-dark">Առկա չէ</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            <ol>
+                                <li>{{ question.option1 }}</li>
+                                <li>{{ question.option2 }}</li>
+                                <li>{{ question.option3 }}</li>
+                                <li>{{ question.option4 }}</li>
+                            </ol>
+                        </td>
+                        <td>{{ question.correct_option }}</td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <!-- Edit Button -->
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-primary edit-question"
+                                        data-id="{{ question.id }}">
+                                    <span class="d-flex align-items-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                             fill="currentColor" class="bi bi-pencil me-1"
+                                             viewBox="0 0 16 16">
+                                            <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/>
+                                        </svg>
+                                        Փոփոխել
+                                    </span>
+                                </button>
+
+                                <!-- Delete Button -->
+                                <form method="post" action="{% url 'delete_question' question.id %}"
+                                      class="delete-form">
+                                    {% csrf_token %}
+                                    <button type="submit"
+                                            class="btn btn-sm btn-outline-danger"
+                                            onclick="return confirm('Հաստատում եք ջնջել այս հարցը?')">
+                                        <span class="d-flex align-items-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                                 fill="currentColor"
+                                                 class="bi bi-trash me-1" viewBox="0 0 16 16">
+                                                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                                                <path fill-rule="evenodd"
+                                                      d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                                            </svg>
+                                            Ջնջել
+                                        </span>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Question Modal -->
+<div class="modal fade" id="editQuestionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" style="background-color: #f8f9fa;">
+            <div class="modal-header" style="background-color: #e9ecef; border-bottom: 1px solid #dee2e6;">
+                <h5 class="modal-title text-dark">Խմբագրել հարցը</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="loadingIndicator"
+                     style="display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.7); z-index: 1000; text-align: center; padding-top: 50%;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+
+                <form id="editQuestionForm" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" id="editQuestionId" name="id">
+
+                    <!-- Question Text -->
+                    <div class="mb-3">
+                        <label class="form-label text-dark">Հարց</label>
+                        <textarea class="form-control bg-light text-dark border-secondary"
+                                  id="editQuestionText" name="question" rows="3" required></textarea>
+                    </div>
+
+                    <!-- Options -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-dark">Տարբերակ 1</label>
+                            <input type="text" class="form-control bg-light text-dark border-secondary"
+                                   id="editOption1" name="option1" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-dark">Տարբերակ 2</label>
+                            <input type="text" class="form-control bg-light text-dark border-secondary"
+                                   id="editOption2" name="option2" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-dark">Տարբերակ 3</label>
+                            <input type="text" class="form-control bg-light text-dark border-secondary"
+                                   id="editOption3" name="option3" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-dark">Տարբերակ 4</label>
+                            <input type="text" class="form-control bg-light text-dark border-secondary"
+                                   id="editOption4" name="option4" required>
+                        </div>
+                    </div>
+
+                    <!-- Correct Answer -->
+                    <div class="mb-3">
+                        <label class="form-label text-dark">Ճիշտ պատասխան</label>
+                        <select class="form-select bg-light text-dark border-secondary"
+                                id="editCorrectOption" name="correct_option" required>
+                            <option value="A">Տարբերակ 1</option>
+                            <option value="B">Տարբերակ 2</option>
+                            <option value="C">Տարբերակ 3</option>
+                            <option value="D">Տարբերակ 4</option>
+                        </select>
+                    </div>
+
+                    <!-- Score -->
+                    <div class="mb-3">
+                        <label class="form-label text-dark">Միավոր</label>
+                        <input type="number" class="form-control bg-light text-dark border-secondary"
+                               id="editScore" name="score" min="1" value="1" required>
+                    </div>
+
+                    <!-- Image Upload -->
+                    <div class="mb-3">
+                        <label class="form-label text-dark">Նկար (ընտրովի)</label>
+                        <input type="file" class="form-control bg-light text-dark border-secondary"
+                               id="editImage" name="image" accept="image/*">
+                        <div class="mt-2 text-center" id="currentImageContainer" style="display: none;">
+                            <p class="text-dark">Ընտրված նկար</p>
+                            <img id="currentImagePreview" src="" class="img-thumbnail" style="max-height: 300px;">
+                            <button type="button" class="btn btn-sm btn-outline-danger mt-2" id="removeImageBtn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                     class="bi bi-trash me-1" viewBox="0 0 16 16">
+                                    <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                                    <path fill-rule="evenodd"
+                                          d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                                </svg>
+                                Հեռացնել նկարը
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="btn btn-primary w-100 mt-3">
+                        Պահպանել
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+    <div id="liveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <strong class="me-auto">Ծանուցում</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body"></div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function() {
+        var editModal = new bootstrap.Modal(document.getElementById('editQuestionModal'));
+        var toastEl = document.getElementById('liveToast');
+        var toast = new bootstrap.Toast(toastEl);
+
+        function showToast(message, type = 'success') {
+            var toastBody = $('.toast-body');
+            toastBody.text(message);
+
+            var toastHeader = $('.toast-header');
+            toastHeader.removeClass('bg-success bg-danger bg-warning text-white text-dark');
+
+            if (type === 'success') {
+                toastHeader.addClass('bg-success text-white');
+            } else if (type === 'error') {
+                toastHeader.addClass('bg-danger text-white');
+            } else {
+                toastHeader.addClass('bg-warning text-dark');
+            }
+
+            toast.show();
+        }
+
+        // Handle edit button click
+        $('.edit-question').click(function(e) {
+            e.preventDefault();
+            var questionId = $(this).data('id');
+            $('#loadingIndicator').show();
+
+            $.ajax({
+                url: '/get-question/' + questionId + '/',
+                method: 'GET',
+                success: function(response) {
+                    if (response.error) {
+                        showToast('Սխալ: ' + response.error, 'error');
+                        return;
+                    }
+
+                    $('#editQuestionId').val(response.id);
+                    $('#editQuestionText').val(response.question);
+                    $('#editOption1').val(response.option1);
+                    $('#editOption2').val(response.option2);
+                    $('#editOption3').val(response.option3);
+                    $('#editOption4').val(response.option4);
+                    $('#editCorrectOption').val(response.correct_option);
+                    $('#editScore').val(response.score || 1);
+
+                    if (response.image) {
+                        $('#currentImagePreview').attr('src', response.image);
+                        $('#currentImageContainer').show();
+                    } else {
+                        $('#currentImageContainer').hide();
+                    }
+
+                    editModal.show();
+                },
+                error: function() {
+                    showToast('Հարցը բեռնելու սխալ', 'error');
+                },
+                complete: function() {
+                    $('#loadingIndicator').hide();
+                }
+            });
+        });
+
+        // Handle image removal
+        $('#removeImageBtn').click(function() {
+            $('#currentImageContainer').hide();
+            $('<input>').attr({
+                type: 'hidden',
+                name: 'remove_image',
+                value: 'true'
+            }).appendTo('#editQuestionForm');
+        });
+
+        // Handle form submission
+        $('#editQuestionForm').submit(function(e) {
+            e.preventDefault();
+
+            var formData = new FormData(this);
+            formData.append('id', $('#editQuestionId').val());
+
+            $.ajax({
+                url: "{% url 'update_question' %}",
+                method: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+                },
+                success: function(response) {
+                    if (response.success) {
+                        showToast('Հարցը հաջողությամբ թարմացվել է', 'success');
+                        editModal.hide();
+                        // Optionally reload the page or update the question on the page
+                        location.reload();
+                    } else {
+                        showToast('Սխալ: ' + (response.error || 'Չհաջողվեց թարմացնել հարցը'), 'error');
+                    }
+                },
+                error: function(xhr) {
+                    showToast('Սերվերի սխալ: ' + xhr.statusText, 'error');
+                }
+            });
+        });
+    });
+</script>
+
+<style>/* Add this to your CSS */
+.toast {
+    max-width: 350px;
+}
+
+.toast-header {
+    font-weight: bold;
+}
+
+.toast-body {
+    padding: 1rem;
+}
+
+#currentImagePreview {
+    max-width: 100%;
+    height: auto;
+}
+
+#loadingIndicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(255, 255, 255, 0.8);
+    z-index: 1050;
+}
+
+#currentImagePreview {
+    transition: transform 0.3s ease;
+  }
+
+
+</style>
+{% endblock %}

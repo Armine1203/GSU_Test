@@ -8,8 +8,11 @@
     <link href="{% static 'css/layout.css' %}" rel="stylesheet">
     <link href="{% static 'css/home.css' %}" rel="stylesheet">
     <link href="{% static 'css/login_register.css' %}" rel="stylesheet">
+    <link href="{% static 'css/view_questions.css' %}" rel="stylesheet">
     <title>{% block title %}{% endblock %} | GSU Test</title>
     <link rel="icon" href="{% static 'img/logo.png' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
 </head>
 <body>
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
@@ -25,28 +28,38 @@
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav">
                 {% if request.user.is_authenticated %}
+                <!-- Show "My Page" first for students -->
+                {% if not request.user.is_staff %}
+                <li class="nav-item">
+                    <a class="nav-link text-center" href="{% url 'student_dashboard' %}">Իմ էջը</a>
+                </li>
+                {% endif %}
+
                 {% if request.user.is_staff %}
+                <li class="nav-item">
+                    <a class="nav-link text-center" href="{% url 'lecturer_dashboard' %}">Իմ էջը</a>
+                </li>
                 <li class="nav-item">
                     <a class="nav-link text-center" href="{% url 'add_question' %}">Ավելացնել Հարցեր</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link text-center" href="{% url 'manage' %}">Կառավարել</a>
+                    <a class="nav-link text-center" href="{% url 'upload_question' %}">Բեռնել հարցեր</a>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link text-center" href="{% url 'setting' %}">Կարգավորումներ</a>
-                </li>
-                {% else %}
 
+                {% else %}
+                <!--                    <li class="nav-item">-->
+                <!--                        <a class="nav-link text-center" href="{% url 'quiz' %}">Քննություն</a>-->
+                <!--                    </li>-->
                 <li class="nav-item">
-                    <a class="nav-link text-center" href="{% url 'quiz' %}">Քննություն</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link text-center" href="{% url 'result' %}">Արդյունք</a>
+                    <a class="nav-link text-center" href="{% url 'results' %}">Արդյունք</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link text-center" href="{% url 'leaderboard' %}">Առաջատար</a>
                 </li>
                 {% endif %}
+                <li class="nav-item">
+                    <a class="nav-link text-center" href="{% url 'feedback_form' %}">Հետադարձ կապ</a>
+                </li>
                 <li class="nav-item">
                     <a class="nav-link text-center" href="{% url 'logout' %}">Դուրս գալ</a>
                 </li>
@@ -54,16 +67,8 @@
                 <li class="nav-item">
                     <a class="nav-link text-center" href="{% url 'login' %}">Մուտք</a>
                 </li>
-                <!--          <li class="nav-item">-->
-                <!--            <a class="nav-link text-center" href="{% url 'register' %}">Գրանցում</a>-->
-                <!--          </li>-->
                 {% endif %}
-                <!-- In the navbar section, add this for student users -->
-                {% if request.user.is_authenticated and not request.user.is_staff %}
-                <li class="nav-item">
-                    <a class="nav-link text-center" href="{% url 'student_dashboard' %}">My Dashboard</a>
-                </li>
-                {% endif %}
+
             </ul>
         </div>
     </div>

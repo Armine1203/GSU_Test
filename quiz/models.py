@@ -2,15 +2,8 @@ from django.db import models
 from django.utils import timezone
 from django.conf import settings
 from django.contrib.auth.models import User
-
-#class CustomUser(AbstractUser):
-#    USER_TYPE_CHOICES = (
-#        (1, 'admin'),
-#        (2, 'lecturer'),
-#        (3, 'student'),
-#    )
-#    user_type = models.PositiveSmallIntegerField(choices=USER_TYPE_CHOICES, default=3)
-#    pass
+from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
+from django.contrib.contenttypes.models import ContentType
 
 class Faculty(models.Model):
     name = models.CharField(max_length=100)
@@ -42,6 +35,7 @@ class Group(models.Model):
         return f"{self.name} ({self.major})"
 
 class Student(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE,related_name='student', null=True)
     name = models.CharField(max_length=100, default='Anun')
     last_name = models.CharField(max_length=100, default='Azganun')
     id_number = models.CharField(max_length=20, unique=True)
@@ -60,19 +54,30 @@ class Lecturer(models.Model):
 class Subject(models.Model):
     name = models.CharField(max_length=100)
     major = models.ForeignKey(Major, on_delete=models.CASCADE)
+    # group = models.ForeignKey(Group, on_delete=models.CASCADE)
     course = models.IntegerField()
     year = models.IntegerField()
     semester_choices = (
-        (1, 'First Semester'),
-        (2, 'Second Semester'),
+        (1, '1-ին կիսամյակ'),
+        (2, '2-րդ կիսամյակ'),
     )
     semester = models.PositiveSmallIntegerField(choices=semester_choices)
+    lecturers = models.ManyToManyField(User, related_name='taught_subjects')
 
     def __str__(self):
         return f"{self.name} - {self.major} (Year {self.year}, Semester {self.semester})"
 
+class QuestionCategory(models.Model):
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
+    name = models.CharField(max_length=100)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+
+    def __str__(self):
+        return self.name
+
 class TestQuestion(models.Model):
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
+    category = models.ForeignKey(QuestionCategory, on_delete=models.CASCADE, null=True, blank=True, related_name="questions")
     question = models.TextField()
     option1 = models.CharField(max_length=200)
     option2 = models.CharField(max_length=200)
@@ -81,15 +86,10 @@ class TestQuestion(models.Model):
     correct_option = models.CharField(max_length=1, choices=[('A', 'A'), ('B', 'B'), ('C', 'C'), ('D', 'D')])
     score = models.IntegerField(default=1)
     creator = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    verified = models.BooleanField(default=False)
     image = models.ImageField(upload_to='question_images/', null=True, blank=True)
-
-    # def __str__(self):
-        # return f"{self.subject}: {self.question[:50]}..."
 
     def __str__(self):
         return f"{self.question}"
-        # return f"{self.subject}: {self.question[:50]}..."
 
 class MidtermExam(models.Model):
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
@@ -97,18 +97,155 @@ class MidtermExam(models.Model):
     questions = models.ManyToManyField(TestQuestion)
     due_date = models.DateTimeField()
     time_limit = models.IntegerField(default=40)  # in minutes
-
+    exam_results = GenericRelation('ExamResult', related_query_name='midterm_exam')
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='created_exams'
+    )
     def __str__(self):
         return f"{self.subject} - {self.group} (Due: {self.due_date})"
 
     def number_of_tests(self):
         return self.questions.count()
 
+    @property
+    def is_random(self):
+        """Check if this exam uses random questions"""
+        return not self.questions.exists() and self.examresult_set.exists()
+
+    def get_questions_for_student(self, student):
+        """Get questions for a specific student"""
+        if self.is_random:
+            try:
+                result = self.examresult_set.get(student=student)
+                return result.questions.all()
+            except ExamResult.DoesNotExist:
+                return TestQuestion.objects.none()
+        return self.questions.all()
+
+class LiveStudentExam (models.Model):
+
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    exam = models.ForeignKey(MidtermExam, on_delete = models.CASCADE)
+    questions = models.ManyToManyField(TestQuestion)
+    exam_results = GenericRelation('ExamResult', related_query_name='live_exam')
+
+
+    def __str__(self):
+        return f"{self.exam.subject} - {self.exam.group} (Due: {self.exam.due_date})"
+
+    @property
+    def subject(self):
+        return self.exam.subject
+
+    @property
+    def group(self):
+        return self.exam.group
+
+    @property
+    def due_date(self):
+        return self.exam.due_date
+
+    @property
+    def time_limit(self):
+        return self.exam.time_limit
+
+    @property
+    def created_by(self):
+        return self.exam.created_by
+
+    @property
+    def number_of_tests(self):
+        return self.exam.number_of_tests()
+
+    @property
+    def is_random(self):
+        return self.exam.is_random
+
+    def get_questions_for_student(self):
+        # Assuming LiveStudentExam.questions is used instead of exam.questions
+        return self.questions.all()
+
 class Mark(models.Model):
-    total = models.IntegerField(blank=False)
-    got = models.IntegerField(blank=False, default=0)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    total = models.IntegerField()
+    got = models.IntegerField()
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    exam = models.ForeignKey(MidtermExam, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
+
+    @property
+    def percentage(self):
+        """Read-only property that calculates the percentage"""
+        if self.total == 0:
+            return 0
+        return round((self.got / self.total) * 100, 2)
+
+    def save(self, *args, **kwargs):
+        """Optionally calculate and store percentage if needed"""
+        # If you need to store percentage, add a field to the model
+        # and calculate it here
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Mark({self.got}/{self.total}, {self.user})"
+
+class StudentAnswer(models.Model):
+    question = models.ForeignKey(TestQuestion, on_delete=models.CASCADE)
+    answer = models.CharField(max_length=1, choices=[('A', 'A'), ('B', 'B'), ('C', 'C'), ('D', 'D')])
+    is_correct = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.question}: {self.answer} ({'Correct' if self.is_correct else 'Incorrect'})"
+
+class ExamResult(models.Model):
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True)
+    object_id = models.PositiveIntegerField(null=True, blank=True)
+    exam = GenericForeignKey('content_type', 'object_id')
+
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    score = models.IntegerField(default=0)
+    completed_at = models.DateTimeField(auto_now_add=True)
+    answers = models.ManyToManyField(StudentAnswer)
+    MAX_SCORE = 20  # Constant for all exams
+
+    @property
+    def total_questions(self):
+        if hasattr(self.exam, 'questions'):
+            return self.exam.questions.count()
+        return 0
+
+    @property
+    def percentage(self):
+        """Calculate percentage based on fixed max score of 20"""
+        if self.MAX_SCORE == 0:
+            return 0
+        return min(round((self.score / self.MAX_SCORE) * 100, 1), 100)  # Caps at 100%
+
+    def __str__(self):
+        return f"{self.student} - {self.exam} ({self.score}/{self.total_questions})"
+
+class Feedback(models.Model):
+    FEEDBACK_TYPES = [
+        ('problem', 'Խնդիր'),
+        ('suggestion', 'Առաջարկություն'),
+        ('compliment', 'Շնորհակալություն'),
+    ]
+    URGENCY_LEVELS = [
+        ('low', 'Ցածր'),
+        ('medium', 'Միջին'),
+        ('high', 'Բարձր'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    feedback_type = models.CharField(max_length=20, choices=FEEDBACK_TYPES)
+    name = models.CharField(max_length=100)
+    email = models.EmailField()
+    subject = models.CharField(max_length=200)
+    message = models.TextField()
+    urgency = models.CharField(max_length=20, choices=URGENCY_LEVELS, default='medium')
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.subject} ({self.get_feedback_type_display()})"

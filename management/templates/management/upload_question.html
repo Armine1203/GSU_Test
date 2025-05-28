@@ -1,24 +1,107 @@
 {% extends 'layout.html' %}
 
-{% block title %}Admin{% endblock %}
+{% block title %}Հարցերի բեռնում{% endblock %}
 
 {% block body %}
-<div class="container mt-5 mb-5">
-<div class="row mt-5">
-  <h1 class="text-center">
-    Ավելացնել հարցեր
-  </h1>
-</div>
-<div class="row mt-3">
-  <form action="{% url 'upload_question' %}" method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    <div class="mb-3">
-      <label for="formFile" class="form-label">Բեռնել CSV ֆայլ.</label>
-      <input class="form-control" type="file" accept=".csv" id="formFile" name="qFile" required>
+<div class="container mt-5 mb-5" style="background-color: #f8f9fa; padding: 20px; border-radius: 10px;">
+    <div class="card" style="background-color: #f8f9fa; border: 1px solid #dee2e6;">
+        <div class="card-header" style="background-color: #e9ecef; border-bottom: 1px solid #dee2e6;">
+            <h2 class="text-dark mb-0">CSV ֆայլով հարցերի բեռնում</h2>
+        </div>
+
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <!-- Subject Selection -->
+                <div class="mb-3">
+                    <label for="subjectSelect" class="form-label text-dark">Առարկա</label>
+                    <select class="form-select bg-light text-dark border-secondary" id="subjectSelect" name="subject" required>
+                        {% if subjects %}
+                        <option value="" selected disabled>Ընտրեք առարկան</option>
+                        {% for subject in subjects %}
+                        <option value="{{ subject.id }}">
+                            {{ subject.name }} ({{ subject.major.name }})
+                        </option>
+                        {% endfor %}
+                        {% else %}
+                        <option value="" selected disabled>Հասանելի առարկաներ չկան</option>
+                        {% endif %}
+                    </select>
+                    {% if not subjects %}
+                    <div class="alert alert-warning mt-2">
+                        Դուք չունեք հասանելի առարկաներ: Խնդրում ենք դիմել ադմինիստրացիային:
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- File Upload -->
+                <div class="mb-3">
+                    <label for="csvFile" class="form-label text-dark">CSV ֆայլ</label>
+                    <input class="form-control bg-light text-dark border-secondary" type="file" id="csvFile" name="qFile" accept=".csv" required>
+                    <div class="form-text text-dark">
+                        Խնդրում ենք համոզվել, որ ֆայլը UTF-8 կոդավորմամբ է<br>
+                        Եթե օգտագործում եք Excel, ընտրեք "Պահպանել որպես CSV UTF-8 (ստորակետով բաժանված)"
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100" {% if not subjects %}disabled{% endif %}>
+                    <i class="bi bi-upload me-2"></i> Բեռնել հարցերը
+                </button>
+            </form>
+        </div>
     </div>
-    <br>
-    <button type="submit" class="btn btn-primary w-100">Բեռնել</button>
-  </form>
-</div>
+
+    <!-- CSV Format Instructions -->
+    <div class="card mt-4" style="background-color: #f8f9fa; border: 1px solid #dee2e6;">
+        <div class="card-header" style="background-color: #e9ecef; border-bottom: 1px solid #dee2e6;">
+            <h4 class="text-dark mb-0">CSV ֆայլի ձևաչափ</h4>
+        </div>
+        <div class="card-body">
+            <p class="text-dark">Ձեր CSV ֆայլը պետք է ունենա հետևյալ սյունակները՝</p>
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped table-light">
+                    <thead>
+                    <tr>
+                        <th>Հարց</th>
+                        <th>Տարբերակ 1</th>
+                        <th>Տարբերակ 2</th>
+                        <th>Տարբերակ 3</th>
+                        <th>Տարբերակ 4</th>
+                        <th>Ճիշտ պատասխան</th>
+                        <th>Միավոր</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td>Ո՞րն է Հայաստանի մայրաքաղաքը</td>
+                        <td>Երևան</td>
+                        <td>Մոսկվա</td>
+                        <td>Տոկիո</td>
+                        <td>Փարիզ</td>
+                        <td>A</td>
+                        <td>1</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="alert alert-light mt-3" style="background-color: #f8f9fa; border: 1px solid #dee2e6;">
+                <strong class="text-dark">Կարևոր հրահանգներ:</strong>
+                <ul class="mb-0 text-dark">
+                    <li>Excel-ում օգտագործեք "Պահպանել որպես CSV UTF-8 (ստորակետով բաժանված)"</li>
+                    <li>Ճիշտ պատասխանը պետք է լինի <code>A</code>, <code>B</code>, <code>C</code> կամ <code>D</code></li>
+                    <li>Միավորը պետք է լինի ամբողջ թիվ (լռելյայն 1)</li>
+                    <li>Ֆայլը պետք է պարունակի վերնագիր տող (սյունակների անունները` <b>
+                    <i>Հարց, Տարբերակ 1, Տարբերակ 2, Տարբերակ 3, Տարբերակ 4, Ճիշտ պատասխան, Միավոր)</i></b></li>
+                </ul>
+            </div>
+            <span class="text-dark">Օրինակը տեսնելու համար ներբեռնեք այս ֆայլը՝  </span>
+            <a href="{% url 'download_question_template' %}" class="btn btn-outline-primary mt-2">
+                <i class="bi bi-download me-2"></i> Ներբեռնել CSV ֆայլի օրինակ
+            </a>
+        </div>
+    </div>
 </div>
 {% endblock %}

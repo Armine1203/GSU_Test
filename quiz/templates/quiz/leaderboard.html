@@ -1,35 +1,196 @@
 {% extends 'layout.html' %}
 
-{% block title %}Leaderboard{% endblock %}
+{% block title %}Քննությունների արդյունքներ{% endblock %}
 
 {% block body %}
-<div class="container mt-5 mb-5">
-<div class="row">
-  <h1 class="text-center">Առաջատարների ցանկ</h1>
+<div class="container mt-5 mb-5" style="background-color: #f8f9fa; padding: 20px; border-radius: 10px;">
+    {% if user_type == 'lecturer' %}
+    <!-- Lecturer View -->
+    <div class="row mb-4">
+        <h1 class="mb-0 text-dark text-center">Քննությունների արդյունքներ</h1>
+        <div class="col-md-6 offset-md-3 mt-3">
+            <form method="get" class="card" style="background-color: white; border: 1px solid #dee2e6;">
+                <div class="card-header" style="background-color: #e9ecef; border-bottom: 1px solid #dee2e6;">
+                    <h5 class="mb-0 text-dark">Խմբեր</h5>
+                </div>
+                <div class="card-body">
+                    <select name="group" class="form-select" onchange="this.form.submit()"
+                            style="background-color: white; border: 1px solid #dee2e6; color: #212529;">
+                        <option value="">-- Ընտրել խումբը --</option>
+                        {% for group in groups %}
+                        <option value="{{ group.id }}"
+                                {% if selected_group and selected_group.id == group.id %}selected{% endif %}>
+                            {{ group.name }} ({{ group.major.name }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if selected_group and group_exams %}
+    <div class="row mb-3">
+        <div class="col-md-6 offset-md-3 text-center">
+            <div class="btn-group">
+                <a href="?group={{ selected_group.id }}&export=word" class="btn btn-success">
+                    <i class="bi bi-file-word"></i> Ներբեռնել արդյունքների Word ֆայլը
+                </a>
+                <a href="?group={{ selected_group.id }}&export=excel" class="btn btn-success">
+                    <i class="bi bi-file-excel"></i> Ներբեռնել արդյունքների Excel ֆայլը
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    {% if error %}
+    <div class="alert alert-danger text-center mt-4"
+         style="background-color: #f8d7da; border-color: #f5c6cb; color: #721c24;">
+        {{ error }}
+    </div>
+    {% elif no_exams %}
+    <div class="alert alert-warning text-center mt-4"
+         style="background-color: #fff3cd; border-color: #ffeeba; color: #856404;">
+        {% if user_type == 'student' %}
+        Ձեր խմբի համար դեռ քննություններ չեն ստեղծվել։
+        {% else %}
+        Ընտրված խմբի համար դեռ քննություններ չեն ստեղծվել։
+        {% endif %}
+    </div>
+    {% elif group_exams %}
+    <div class="row">
+        {% if user_type == 'lecturer' and selected_group %}
+        <h2 class="text-center mb-4 text-dark">{{ selected_group.name }} խումբ</h2>
+        {% endif %}
+
+        {% for exam in group_exams %}
+        <div class="card mb-4" style="background-color: white; border: 1px solid #dee2e6;">
+            <div class="card-header" style="background-color: #e9ecef; border-bottom: 1px solid #dee2e6;">
+                <h5 class="mb-0 text-dark">{{ exam.subject.name }}</h5>
+                <small class="text-dark">Ամսաթիվ: {{ exam.due_date|date:"d.m.Y H:i" }}</small>
+                {% if user_type == 'lecturer' %}
+                <span class="badge bg-secondary float-end" style="background-color: #6c757d;">
+                    {{ exam.questions.count }} հարց
+                </span>
+                {% endif %}
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover m-0 table-light">
+                        <thead>
+                        <tr style="background-color: #e9ecef;">
+                            <th class="text-dark">#</th>
+                            <th class="text-dark">Ուսանող</th>
+                            {% if user_type == 'lecturer' %}  <!-- Only show ID column for lecturers -->
+                            <th class="text-dark">ID</th>
+                            {% endif %}
+                            <th class="text-dark">Միավոր</th>
+                            <th class="text-dark">Տոկոս</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <!-- Midterm Exam Results -->
+                        {% for result in exam_results %}
+                        {% if result.content_type.model == 'midtermexam' and result.object_id == exam.id %}
+                        <tr style="background-color: white;">
+                            <td class="text-dark">{{ forloop.counter }}</td>
+                            <td class="text-dark">
+                                {{ result.student.name }} {{ result.student.last_name }}
+                                {% if user_type == 'student' and result.student.user == request.user %}
+                                <span class="badge bg-info text-dark" style="background-color: #bee5eb;">Դուք</span>
+                                {% endif %}
+                            </td>
+                            {% if user_type == 'lecturer' %}  <!-- Only show ID for lecturers -->
+                            <td class="text-dark">{{ result.student.id_number }}</td>
+                            {% endif %}
+                            <td class="text-dark">{{ result.got }}</td>
+                            <td class="text-dark">
+                                <div class="progress" style="height: 25px;">
+                                    <div class="progress-bar
+                                                {% if result.percentage >= 80 %}bg-success
+                                                {% elif result.percentage >= 50 %}bg-warning
+                                                {% else %}bg-danger
+                                                {% endif %}"
+                                         style="width: {{ result.percentage }}%">
+                                        <span class="text-light">{{ result.percentage|floatformat:1 }}%</span>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+
+                        <!-- Live Exam Results -->
+                        {% for result in exam_results %}
+                        {% if result.content_type.model == 'livestudentexam' and result.exam.exam.id == exam.id %}
+                        <tr style="background-color: white;">
+                            <td class="text-dark">{{ forloop.counter }}</td>
+                            <td class="text-dark">
+                                {{ result.student.name }} {{ result.student.last_name }}
+                                {% if user_type == 'student' and result.student.user == request.user %}
+                                <span class="badge bg-info text-dark" style="background-color: #bee5eb;">Դուք</span>
+                                {% endif %}
+                            </td>
+                            {% if user_type == 'lecturer' %}  <!-- Only show ID for lecturers -->
+                            <td class="text-dark">{{ result.student.id_number }}</td>
+                            {% endif %}
+                            <td class="text-dark">{{ result.score }}</td>
+                            <td class="text-dark">
+                                <div class="progress" style="height: 25px;">
+                                    <div class="progress-bar
+                                                {% if result.percentage >= 80 %}bg-success
+                                                {% elif result.percentage >= 50 %}bg-warning
+                                                {% else %}bg-danger
+                                                {% endif %}"
+                                         style="width: {{ result.percentage }}%">
+                                        <span class="text-light">{{ result.percentage|floatformat:1 }}%</span>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+
+                        <!-- Missing Students (for lecturers) -->
+                        {% if user_type == 'lecturer' %}
+                        {% for student in missing_result_students %}
+                        {% if student.group.id == selected_group.id %}
+                        <tr style="background-color: #f8f9fa;">
+                            <td class="text-dark">{{ forloop.counter }}</td>
+                            <td class="text-dark">
+                                {{ student.name }} {{ student.last_name }}
+                            </td>
+                            <td class="text-dark">{{ student.id_number }}</td>
+                            <td class="text-danger" colspan="3">Չի մասնակցել</td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                        {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
 </div>
-<div class="row">
-  <table class="table">
-  <thead>
-    <tr>
-      <th scope="col">Վարկանիշ</th>
-      <th scope="col">Անուն</th>
-      <th scope="col">Միավորներ</th>
-      <th scope="col">Հարցերի քանակ</th>
-      <th scope="col">Արդյունք</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for result in results %}
-    <tr>
-      <th scope="row">{{ forloop.counter }}</th>
-      <td>{{ result.user.username }}</td>
-      <td>{{ result.got }}</td>
-      <td>{{ result.total }}</td>
-      <td>{{ result.got }}/{{ result.total }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-</div>
-</div>
+
+<style>
+    .progress-bar {
+        position: relative;
+    }
+    .progress-bar span {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        font-weight: bold;
+    }
+    .badge.bg-info {
+        background-color: #bee5eb !important;
+        color: #0c5460 !important;
+    }
+</style>
 {% endblock %}

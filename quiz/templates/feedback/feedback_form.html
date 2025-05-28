@@ -1,0 +1,85 @@
+{% extends 'layout.html' %}
+{% load static %}
+
+{% block title %}Feedback Form{% endblock %}
+
+{% block body %}
+<div class="container mt-5 mb-5" style="background-color: #f8f9fa; padding: 20px; border-radius: 10px;">
+    <div class="card" style="background-color: white; border: 1px solid #dee2e6;">
+        <div class="card-header" style="background-color: #e9ecef; color: #495057; border-bottom: 1px solid #dee2e6;">
+            <h1>Հետադարձ կապի ձև</h1>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+
+                <!-- Feedback Type -->
+                <div class="mb-4">
+                    <label class="form-label d-block" style="color: #212529; margin-bottom: 8px;">Տեսակը</label>
+                    {{ form.feedback_type }}
+                </div>
+
+                <!-- Name -->
+                <div class="mb-4">
+                    <label class="form-label d-block" style="color: #212529; margin-bottom: 8px;">Անուն Ազգանուն</label>
+                    {{ form.name }}
+                </div>
+
+                <!-- Email -->
+                <div class="mb-4">
+                    <label class="form-label d-block" style="color: #212529; margin-bottom: 8px;">Էլեկտրոնային հասցե</label>
+                    {{ form.email }}
+                </div>
+
+                <!-- Subject -->
+                <div class="mb-4">
+                    <label class="form-label d-block" style="color: #212529; margin-bottom: 8px;">Առարկա</label>
+                    {{ form.subject }}
+                </div>
+
+                <!-- Message -->
+                <div class="mb-4">
+                    <label class="form-label d-block" style="color: #212529; margin-bottom: 8px;">Հաղորդագրություն</label>
+                    {{ form.message }}
+                </div>
+
+                <!-- Urgency -->
+                <div class="mb-4">
+                    <label class="form-label d-block" style="color: #212529; margin-bottom: 8px;">Հրատապություն</label>
+                    {{ form.urgency }}
+                </div>
+
+                <!-- Submit Button -->
+                <div class="d-grid gap-2 mt-4">
+                    <button type="submit" class="btn btn-sm btn-outline-primary" style="border: 1px solid ; padding: 10px;" >
+                        Ուղարկել
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Style all form inputs consistently */
+    #id_feedback_type, #id_name, #id_email, #id_subject, #id_message, #id_urgency {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        background-color: white;
+        color: #212529;
+    }
+
+    /* Specifically style the select dropdowns */
+    #id_feedback_type, #id_urgency {
+        height: 40px;
+    }
+
+    /* Style the textarea specifically */
+    #id_message {
+        min-height: 120px;
+        resize: vertical;
+    }
+</style>
+{% endblock %}

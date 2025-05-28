@@ -1,0 +1,24 @@
+{% extends 'layout.html' %}
+{% load static %}
+
+{% block title %}Հետադարձ կապն ընդունված է {% endblock %}
+
+{% block body %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+            <div class="card shadow bg-light text-dark">  <!-- Light background, dark text -->
+                <div class="card-header bg-success text-white">  <!-- Keep success header with white text -->
+                    <h3>Շնորհակալություն</h3>
+                </div>
+                <div class="card-body">
+                    <i class="fas fa-check-circle fa-5x text-success mb-4"></i>
+                    <h4>Ձեր հաղորդագրությունը հաջողությամբ ուղարկվել է</h4>
+                    <p>Մենք գնահատում ենք Ձեր կարծիքը և շուտով կվերանայենք այն։</p>
+                    <a href="{% url 'student_dashboard' %}" class="btn btn-sm btn-outline-primary" style="border: 1px solid; padding: 10px;">Վերադառնալ Իմ էջ </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
