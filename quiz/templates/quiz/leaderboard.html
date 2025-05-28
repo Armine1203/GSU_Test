@@ -33,11 +33,12 @@
     <div class="row mb-3">
         <div class="col-md-6 offset-md-3 text-center">
             <div class="btn-group">
+
                 <a href="?group={{ selected_group.id }}&export=word" class="btn btn-success">
-                    <i class="bi bi-file-word"></i> Ներբեռնել արդյունքների Word ֆայլը
+                    <i class="bi bi-file-word"></i> Ներբեռնել բոլոր քննությունների արդյունքների Word ֆայլը
                 </a>
                 <a href="?group={{ selected_group.id }}&export=excel" class="btn btn-success">
-                    <i class="bi bi-file-excel"></i> Ներբեռնել արդյունքների Excel ֆայլը
+                    <i class="bi bi-file-excel"></i> Ներբեռնել բոլոր քննությունների արդյունքների Excel ֆայլը
                 </a>
             </div>
         </div>
@@ -70,11 +71,16 @@
             <div class="card-header" style="background-color: #e9ecef; border-bottom: 1px solid #dee2e6;">
                 <h5 class="mb-0 text-dark">{{ exam.subject.name }}</h5>
                 <small class="text-dark">Ամսաթիվ: {{ exam.due_date|date:"d.m.Y H:i" }}</small>
-                {% if user_type == 'lecturer' %}
-                <span class="badge bg-secondary float-end" style="background-color: #6c757d;">
-                    {{ exam.questions.count }} հարց
-                </span>
-                {% endif %}
+                <!-- Download links for this exam -->
+                   <div style="position: absolute; top: 10px; right: 15px;" class="text-dark">
+                       Ներբեռնել`
+                    <a href="?group={{ selected_group.id }}&exam_id={{ exam.id }}&export=word" title="Download Word">
+                        📄 Word ֆայլ
+                    </a> |
+                    <a href="?group={{ selected_group.id }}&exam_id={{ exam.id }}&export=excel" title="Download Excel">
+                        📊 Excel ֆայլ
+                     </a>
+    </div>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">

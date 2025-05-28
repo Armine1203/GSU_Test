@@ -1,4 +1,3 @@
-
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.views.decorators.http import require_POST
@@ -302,19 +301,24 @@ from .models import (
 class Leaderboard(View):
     def get(self, request, exam_id=None):
         try:
-            context = {}
-
             if hasattr(request.user, 'student'):
-                context.update(self._student_view(request))
+                context = self._student_view(request)
+                if not context.get('group_exams'):
+                    context['no_exams'] = True
+                return render(request, 'quiz/leaderboard.html', context)
+
             elif hasattr(request.user, 'lecturer'):
-                context.update(self._lecturer_view(request))
+                result = self._lecturer_view(request)
+                # If the result is HttpResponse (file), return it directly
+                if isinstance(result, HttpResponse):
+                    return result
+                # else it's context dict -> render template
+                if not result.get('group_exams'):
+                    result['no_exams'] = True
+                return render(request, 'quiz/leaderboard.html', result)
+
             else:
                 return render(request, 'quiz/leaderboard.html', {'error': "Invalid user type"})
-
-            if not context.get('group_exams'):
-                context['no_exams'] = True
-
-            return render(request, 'quiz/leaderboard.html', context)
 
         except Exception as e:
             return render(request, 'quiz/leaderboard.html', {'error': str(e)})
@@ -362,6 +366,7 @@ class Leaderboard(View):
 
         selected_group_id = request.GET.get('group')
         export_format = request.GET.get('export')
+        exam_id = request.GET.get('exam_id')  # Get exam_id from query params
 
         context = {
             'user_type': 'lecturer',
@@ -383,7 +388,6 @@ class Leaderboard(View):
                 'student', 'content_type'
             ).order_by('-completed_at')
 
-            # Identify students without results
             students_with_results = set(
                 exam_results.values_list('student_id', flat=True).distinct()
             )
@@ -400,8 +404,21 @@ class Leaderboard(View):
                 'missing_result_students': missing_result_students,
             })
 
+            # Filter exams and results by exam_id if provided (single exam export)
             if export_format in ['word', 'excel']:
-                return self.export_results(selected_group, group_exams, exam_results, export_format)
+                if exam_id:
+                    exam_id = int(exam_id)
+                    exams = group_exams.filter(id=exam_id)
+                    # Filter results for only this exam
+                    results = [
+                        r for r in exam_results
+                        if (r.content_type.model == 'midtermexam' and r.object_id == exam_id) or
+                           (r.content_type.model == 'livestudentexam' and r.exam.exam.id == exam_id)
+                    ]
+                    return self.export_results(selected_group, exams, results, export_format)
+                else:
+                    # Export all exams if no exam_id specified
+                    return self.export_results(selected_group, group_exams, exam_results, export_format)
 
         return context
 
@@ -420,7 +437,7 @@ class Leaderboard(View):
             document.add_paragraph(f'Ամսաթիվ - {exam.due_date.strftime("%d.%m.%Y %H:%M")}')
 
             # Create table
-            table = document.add_table(rows=1, cols=4)
+            table = document.add_table(rows=1, cols=5)  # 5 columns: #, name, ID, score, percentage
             table.style = 'Table Grid'
 
             # Header row
@@ -430,6 +447,7 @@ class Leaderboard(View):
             hdr_cells[2].text = 'ID'
             hdr_cells[3].text = 'Միավոր'
             hdr_cells[4].text = 'Տոկոս'
+
 
             # Filter and sort results for this exam
             exam_results = [
@@ -445,7 +463,7 @@ class Leaderboard(View):
                 row_cells[0].text = str(idx)
                 row_cells[1].text = f"{result.student.name} {result.student.last_name}"
                 row_cells[2].text = result.student.id_number
-                row_cells[3].text = f"{result.score}/{result.exam.questions.count()}"
+                row_cells[3].text = f"{result.score}"
                 row_cells[4].text = f"{result.percentage:.1f}%"
 
         response = HttpResponse(
@@ -458,7 +476,7 @@ class Leaderboard(View):
     def _export_to_excel(self, group, exams, results):
         wb = Workbook()
         ws = wb.active
-        ws.title = f"{group.name} Results"
+        ws.title = f"{group.name} Արդյունքներ"
 
         # Header row
         ws.append(["#", "Ուսանող", "ID", "Առարկա", "Միավոր", "Տոկոս", "Ամսաթիվ"])
@@ -480,7 +498,7 @@ class Leaderboard(View):
                     f"{result.student.name} {result.student.last_name}",
                     result.student.id_number,
                     exam.subject.name,
-                    f"{result.score}/{result.exam.questions.count()}",
+                    f"{result.score}",
                     f"{result.percentage:.1f}%",
                     exam.due_date.strftime("%d.%m.%Y %H:%M")
                 ])
@@ -1342,4 +1360,3 @@ def delete_category(request, category_id):
             'success': False,
             'error': str(e)
         }, status=500)
-
