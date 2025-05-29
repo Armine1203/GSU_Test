@@ -32,7 +32,8 @@ DEBUG = True
 ALLOWED_HOSTS = [
     '127.0.0.1',
     'localhost',
-    '409a-91-205-199-229.ngrok-free.app',  # ← Your full ngrok domain
+    '5324-91-205-199-229.ngrok-free.app',
+    '3ddb-91-205-199-229.ngrok-free.app',
     '.ngrok.io',
     '.ngrok-free.app',
 ]
@@ -162,4 +163,5 @@ DEFAULT_CHARSET = 'utf-8'
 
 CSRF_TRUSTED_ORIGINS = [
     'https://409a-91-205-199-229.ngrok-free.app',
+    'https://3ddb-91-205-199-229.ngrok-free.app'
 ]

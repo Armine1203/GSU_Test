@@ -38,12 +38,14 @@ urlpatterns = [
     path('results/', results, name='results'),  # List of all results
     path('results/<int:result_id>/', views.result_detail, name='result_detail'),  # Detailed view of a specific result
 
-    #feedback
+    # feedback
     path('feedback/', views.feedback_view, name='feedback_form'),
     path('feedback/success/', views.feedback_success, name='feedback_success'),
     path('ajax/load-questions/', views.load_questions, name='ajax_load_questions'),
 
-#caTEGORY
+    # caTEGORY
     path('create-category/', views.create_category, name='create_category'),
-    path('delete_category/<int:category_id>/', views.delete_category, name='delete_category'),
+    # path('delete_category/<int:category_id>/', views.delete_category, name='delete_category'),
+    # path('update-category/<int:category_id>/', views.update_category, name='update_category'),
+
 ]

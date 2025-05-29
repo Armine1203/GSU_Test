@@ -120,55 +120,50 @@
     </div>
 
     <!-- Categories Section -->
-<div class="row mt-4">
-    <div class="col-12">
-        <div class="card" style="background-color: white; border: 1px solid #dee2e6;">
-            <div class="card-header" style="background-color: #e9ecef; border-bottom: 1px solid #dee2e6;">
-                <div class="d-flex justify-content-between align-items-center">
-                    <span class="text-dark">Իմ կատեգորիաները</span>
-                    <span class="badge" style="background-color: #f8f9fa; color: #495057;">
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card" style="background-color: white; border: 1px solid #dee2e6;">
+                <div class="card-header" style="background-color: #e9ecef; border-bottom: 1px solid #dee2e6;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-dark">Իմ կատեգորիաները</span>
+                        <span class="badge" style="background-color: #f8f9fa; color: #495057;">
                         {{ categories.count }} կատեգորիա
                     </span>
+                    </div>
                 </div>
-            </div>
-            <div class="card-body">
-                {% if categories %}
-                <div class="table-responsive">
-                    <table class="table table-light table-hover">
-                        <thead>
-                            <tr>
+                <div class="card-body">
+                    {% if categories %}
+                    <div class="table-responsive">
+                        <table class="table table-light table-hover">
+                            <thead>
+                            <tr class="text-center">
                                 <th>Անվանում</th>
                                 <th>Առարկա</th>
                                 <th>Հարցերի քանակ</th>
-                                <th>Գործողություններ</th>
                             </tr>
-                        </thead>
-                        <tbody>
+                            </thead>
+                            <tbody>
                             {% for category in categories %}
-                            <tr>
+                            <tr class="text-center">
                                 <td>{{ category.name }}</td>
                                 <td>{{ category.subject.name }}</td>
                                 <td>{{ category.questions.count }}</td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-danger delete-category"
-                                            data-id="{{ category.id }}">
-                                        <i class="bi bi-trash"></i> Ջնջել
-                                    </button>
-                                </td>
+
+
                             </tr>
                             {% endfor %}
-                        </tbody>
-                    </table>
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        Դուք դեռ կատեգորիաներ չունեք։ Ստեղծեք նորը՝ օգտագործելով վերևի կոճակը։
+                    </div>
+                    {% endif %}
                 </div>
-                {% else %}
-                <div class="alert alert-warning">
-                    Դուք դեռ կատեգորիաներ չունեք։ Ստեղծեք նորը՝ օգտագործելով վերևի կոճակը։
-                </div>
-                {% endif %}
             </div>
         </div>
     </div>
-</div>
 
 
     <!-- Created Exams Section  -->
@@ -210,12 +205,18 @@
                                             <i class="bi bi-calendar-event me-2"></i>
                                             {{ exam.due_date|date:"Y-m-d H:i" }}
                                         </div>
+
+                                        {% if exam.question_count > 1 %}
                                         <div style="color: black">
                                             <i class="bi bi-question-circle me-2"></i>
                                             {{ exam.question_count }} հարց
                                         </div>
+                                        {% endif %}
                                     </div>
                                 </div>
+
+
+                                {% if exam.question_count > 1 %}
                                 <div class="card-footer bg-transparent">
                                     <div class="d-flex justify-content-between">
                                         <a href="{% url 'exam_detail' exam.id %}"
@@ -224,6 +225,7 @@
                                         </a>
                                     </div>
                                 </div>
+                                {% endif %}
                             </div>
                         </div>
                         {% endfor %}
@@ -586,12 +588,12 @@
 </div>
 
 {% if messages %}
-  {% for message in messages %}
-    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-      {{ message }}
-      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-  {% endfor %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endfor %}
 {% endif %}
 
 {% endblock %}
@@ -872,109 +874,166 @@
         });
 
 
-
 </script>
 <script>
-// Add this in your main template or a separate JS file
-document.addEventListener('DOMContentLoaded', function() {
-    // Use event delegation for dynamically loaded content
-    document.addEventListener('click', function(e) {
-        const deleteBtn = e.target.closest('.delete-category');
-        if (!deleteBtn) return;
+    // Add this in your main template or a separate JS file
+    document.addEventListener('DOMContentLoaded', function() {
+        // Use event delegation for dynamically loaded content
+        document.addEventListener('click', function(e) {
+            const deleteBtn = e.target.closest('.delete-category');
+            if (!deleteBtn) return;
 
-        e.preventDefault();
-        e.stopPropagation();
+            e.preventDefault();
+            e.stopPropagation();
 
-        const categoryId = deleteBtn.dataset.id;
-        const categoryRow = deleteBtn.closest('tr');
-        const categoryName = categoryRow.querySelector('td:first-child').textContent.trim();
+            const categoryId = deleteBtn.dataset.id;
+            const categoryRow = deleteBtn.closest('tr');
+            const categoryName = categoryRow.querySelector('td:first-child').textContent.trim();
 
-        if (!confirm(`Հաստատում եք "${categoryName}" կատեգորիայի ջնջումը?`)) {
-            return;
-        }
-
-        // Get CSRF token from meta tag (recommended approach)
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content ||
-                         document.querySelector('[name=csrfmiddlewaretoken]')?.value;
-
-        if (!csrfToken) {
-            console.error('CSRF token not found');
-            alert('Session error. Please refresh the page.');
-            return;
-        }
-
-        // Show loading state
-        const originalHtml = deleteBtn.innerHTML;
-        deleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
-        deleteBtn.disabled = true;
-
-        fetch(`/quiz/delete_category/${categoryId}/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': csrfToken,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({})  // Empty body
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(err => { throw err; });
+            if (!confirm(`Հաստատում եք "${categoryName}" կատեգորիայի ջնջումը?`)) {
+                return;
             }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                // Remove the row
-                categoryRow.remove();
 
-                // Update category count
-                const countBadge = document.querySelector('.card-header .badge');
-                if (countBadge) {
-                    const currentCount = parseInt(countBadge.textContent);
-                    countBadge.textContent = `${currentCount - 1} կատեգորիա`;
+            // Get CSRF token from meta tag (recommended approach)
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content ||
+                             document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+
+            if (!csrfToken) {
+                console.error('CSRF token not found');
+                alert('Session error. Please refresh the page.');
+                return;
+            }
+
+            // Show loading state
+            const originalHtml = deleteBtn.innerHTML;
+            deleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+            deleteBtn.disabled = true;
+
+            fetch(`/quiz/delete_category/${categoryId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({})  // Empty body
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw err; });
                 }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Remove the row
+                    categoryRow.remove();
 
-                // Show success message (using Bootstrap toast)
-                showBootstrapToast('success', 'Կատեգորիան հաջողությամբ ջնջվել է');
-            } else {
-                throw new Error(data.error || 'Unknown error');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showBootstrapToast('error', error.message || 'Սխալ կատեգորիա ջնջելիս');
-            deleteBtn.innerHTML = originalHtml;
-            deleteBtn.disabled = false;
+                    // Update category count
+                    const countBadge = document.querySelector('.card-header .badge');
+                    if (countBadge) {
+                        const currentCount = parseInt(countBadge.textContent);
+                        countBadge.textContent = `${currentCount - 1} կատեգորիա`;
+                    }
+
+                    // Show success message (using Bootstrap toast)
+                    showBootstrapToast('success', 'Կատեգորիան հաջողությամբ ջնջվել է');
+                } else {
+                    throw new Error(data.error || 'Unknown error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showBootstrapToast('error', error.message || 'Սխալ կատեգորիա ջնջելիս');
+                deleteBtn.innerHTML = originalHtml;
+                deleteBtn.disabled = false;
+            });
+        });
+
+        // Helper function for Bootstrap toast notifications
+        function showBootstrapToast(type, message) {
+            const toastContainer = document.getElementById('toastContainer');
+            if (!toastContainer) return;
+
+            const toastId = 'toast-' + Date.now();
+            const toastHtml = `
+                <div id="${toastId}" class="toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0"
+                     role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `;
+
+            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+            const toastElement = document.getElementById(toastId);
+            const toast = new bootstrap.Toast(toastElement);
+            toast.show();
+
+            // Auto-remove after hide
+            toastElement.addEventListener('hidden.bs.toast', function() {
+                toastElement.remove();
+            });
+        }
+    });
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        document.querySelectorAll('.delete-category').forEach(button => {
+            button.addEventListener('click', function () {
+                const categoryId = this.getAttribute('data-id');
+
+                if (!confirm('Ցանկանու՞մ եք ջնջել այս կատեգորիան։')) return;
+
+                fetch(`/delete-category/${categoryId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        location.reload();
+                    } else {
+                        alert(data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Սխալ առաջացավ։');
+                });
+            });
         });
     });
 
-    // Helper function for Bootstrap toast notifications
-    function showBootstrapToast(type, message) {
-        const toastContainer = document.getElementById('toastContainer');
-        if (!toastContainer) return;
 
-        const toastId = 'toast-' + Date.now();
-        const toastHtml = `
-            <div id="${toastId}" class="toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0"
-                 role="alert" aria-live="assertive" aria-atomic="true">
-                <div class="d-flex">
-                    <div class="toast-body">
-                        ${message}
-                    </div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                </div>
-            </div>
-        `;
-
-        toastContainer.insertAdjacentHTML('beforeend', toastHtml);
-        const toastElement = document.getElementById(toastId);
-        const toast = new bootstrap.Toast(toastElement);
-        toast.show();
-
-        // Auto-remove after hide
-        toastElement.addEventListener('hidden.bs.toast', function() {
-            toastElement.remove();
-        });
+    fetch(`/update-category/${categoryId}/`, {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken
+    },
+    body: JSON.stringify({
+        name: "New Name",
+        subject_id: 3  // optional
+    })
+})
+.then(res => res.json())
+.then(data => {
+    if (data.success) {
+        alert("Updated!");
+        location.reload();
+    } else {
+        alert(data.error);
     }
 });
+
 </script>

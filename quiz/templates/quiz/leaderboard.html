@@ -8,7 +8,7 @@
     <!-- Lecturer View -->
     <div class="row mb-4">
         <h1 class="mb-0 text-dark text-center">Քննությունների արդյունքներ</h1>
-        <div class="col-md-6 offset-md-3 mt-3">
+        <div class="col-12 col-md-6 offset-md-3 mt-3">
             <form method="get" class="card" style="background-color: white; border: 1px solid #dee2e6;">
                 <div class="card-header" style="background-color: #e9ecef; border-bottom: 1px solid #dee2e6;">
                     <h5 class="mb-0 text-dark">Խմբեր</h5>
@@ -72,15 +72,17 @@
                 <h5 class="mb-0 text-dark">{{ exam.subject.name }}</h5>
                 <small class="text-dark">Ամսաթիվ: {{ exam.due_date|date:"d.m.Y H:i" }}</small>
                 <!-- Download links for this exam -->
-                   <div style="position: absolute; top: 10px; right: 15px;" class="text-dark">
-                       Ներբեռնել`
-                    <a href="?group={{ selected_group.id }}&exam_id={{ exam.id }}&export=word" title="Download Word">
-                        📄 Word ֆայլ
-                    </a> |
-                    <a href="?group={{ selected_group.id }}&exam_id={{ exam.id }}&export=excel" title="Download Excel">
-                        📊 Excel ֆայլ
-                     </a>
-    </div>
+                {% if user_type == 'lecturer' %}
+                <div class="d-flex flex-column flex-md-row justify-content-center gap-2">
+                    <a href="?group={{ selected_group.id }}&export=word" class="btn btn-success">
+                        📄 Ներբեռնել Word ֆայլը
+                    </a>
+                    <a href="?group={{ selected_group.id }}&export=excel" class="btn btn-success">
+                        📊 Ներբեռնել Excel ֆայլը
+                    </a>
+                </div>
+
+                {% endif %}
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">

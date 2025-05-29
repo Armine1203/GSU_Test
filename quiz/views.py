@@ -788,16 +788,14 @@ def results(request):
     marks = Mark.objects.filter(user=request.user).select_related('exam')
     exam_results = ExamResult.objects.filter(student=student).select_related('exam')
 
-    # Calculate statistics
-    total_tests = marks.count()
-    avg_percentage = marks.aggregate(
-        avg=models.Avg('got', output_field=models.FloatField()) * 100 / models.F('total')
-    )['avg']
+    percentages = [(mark.got / mark.total) * 100 for mark in marks if mark.total]
+    avg_percentage = sum(percentages) / len(percentages) if percentages else 0
+
     best_score = marks.order_by('-got').first()
 
     context = {
         'results': marks,
-        'total_tests': total_tests,
+        'total_tests': marks.count(),
         'avg_percentage': avg_percentage or 0,
         'best_score': best_score,
     }
@@ -1333,30 +1331,30 @@ def create_category(request):
 
     return redirect('lecturer_dashboard')
 
-@require_POST
-def delete_category(request, category_id):
-    try:
-        # Make sure category subject is among lecturer's subjects
-        category = QuestionCategory.objects.get(
-            id=category_id,
-            subject__in=request.user.lecturer.subjects.all()
-        )
-        category_name = category.name
-        category.delete()
-
-        return JsonResponse({
-            'success': True,
-            'message': f'Category "{category_name}" deleted successfully'
-        })
-
-    except QuestionCategory.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'error': 'Category not found or you don’t have permission'
-        }, status=404)
-
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        }, status=500)
+# @require_POST
+# def delete_category(request, category_id):
+#     try:
+#         # Make sure category subject is among lecturer's subjects
+#         category = QuestionCategory.objects.get(
+#             id=category_id,
+#             subject__in=request.user.lecturer.subjects.all()
+#         )
+#         category_name = category.name
+#         category.delete()
+#
+#         return JsonResponse({
+#             'success': True,
+#             'message': f'Category "{category_name}" deleted successfully'
+#         })
+#
+#     except QuestionCategory.DoesNotExist:
+#         return JsonResponse({
+#             'success': False,
+#             'error': 'Category not found or you don’t have permission'
+#         }, status=404)
+#
+#     except Exception as e:
+#         return JsonResponse({
+#             'success': False,
+#             'error': str(e)
+#         }, status=500)
